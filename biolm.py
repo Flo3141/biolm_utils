@@ -5,6 +5,7 @@ import random
 import numpy as np
 import torch
 from cross_validation import cv_wrapper
+from entry import *
 from interpret import loo_scores
 from train_tokenizer import tokenize
 from train_utils import (
@@ -15,14 +16,21 @@ from train_utils import (
     get_tokenizer,
     get_trainer,
 )
-from transformers import (
-    DataCollatorWithPadding,
-    DefaultDataCollator,
-    TrainerState,
-    TrainingArguments,
-)
+from transformers import DefaultDataCollator, TrainerState, TrainingArguments
 
-from entry import *
+from config import (
+    ADD_SPECIAL_TOKENS,
+    CONFIGCLS,
+    DATACOLLATOR_CLS_FOR_PRETRAINING,
+    DATASET_CLS,
+    LEARNINGRATE,
+    MAX_GRAD_NORM,
+    MODELCLS,
+    PRETRAINING_REQUIRED,
+    SPECIAL_TOKENIZER_FOR_TRAINER_CLS,
+    TOKENIZER_CLS,
+    WEIGHT_DECAY,
+)
 
 np.random.seed(0)
 random.seed(0)
@@ -43,7 +51,6 @@ if args.mode != "tokenize":
         if SPECIAL_TOKENIZER_FOR_TRAINER_CLS is None
         else SPECIAL_TOKENIZER_FOR_TRAINER_CLS()
     )
-    DATASET_CLS = DATASET_CLS
     DATASET_CLS = get_dataset(
         args, TOKENIZER, ADD_SPECIAL_TOKENS, DATASETFILE, DATASET_CLS
     )
