@@ -4,7 +4,7 @@ import random
 
 import numpy as np
 import torch
-from cross_validation import cv_wrapper
+from cross_validation import parametrized_decorator
 from entry import *
 from interpret import loo_scores
 from train_tokenizer import tokenize
@@ -20,12 +20,12 @@ from transformers import DefaultDataCollator, TrainerState, TrainingArguments
 
 from config import (
     ADD_SPECIAL_TOKENS,
-    CONFIGCLS,
+    CONFIG_CLS,
     DATACOLLATOR_CLS_FOR_PRETRAINING,
     DATASET_CLS,
     LEARNINGRATE,
     MAX_GRAD_NORM,
-    MODELCLS,
+    MODEL_CLS,
     PRETRAINING_REQUIRED,
     SPECIAL_TOKENIZER_FOR_TRAINER_CLS,
     TOKENIZER_CLS,
@@ -51,11 +51,9 @@ if args.mode != "tokenize":
         if SPECIAL_TOKENIZER_FOR_TRAINER_CLS is None
         else SPECIAL_TOKENIZER_FOR_TRAINER_CLS()
     )
-    DATASET_CLS = get_dataset(
-        args, TOKENIZER, ADD_SPECIAL_TOKENS, DATASETFILE, DATASET_CLS
-    )
+    DATASET = get_dataset(args, TOKENIZER, ADD_SPECIAL_TOKENS, DATASETFILE, DATASET_CLS)
 else:
-    DATASET_CLS = None
+    DATASET = None
     TOKENIZER = None
 
 
@@ -81,9 +79,9 @@ def train(
     # Getting the config.
     config = model_cls.get_config(
         args=args,
-        config_cls=CONFIGCLS,
+        config_cls=CONFIG_CLS,
         tokenizer=tokenizer,
-        dataset=DATASET_CLS,
+        dataset=DATASET,
         nlabels=nlabels,
     )
 
@@ -199,9 +197,9 @@ def test(test_dataset, data_collator, model_load_path, model_cls=None, model=Non
     if model is None:
         config = model_cls.get_config(
             args=args,
-            config_cls=CONFIGCLS,
+            config_cls=CONFIG_CLS,
             tokenizer=TOKENIZER,
-            dataset=DATASET_CLS,
+            dataset=DATASET,
             nlabels=nlabels,
         )
         model = get_model(
@@ -254,7 +252,8 @@ def test(test_dataset, data_collator, model_load_path, model_cls=None, model=Non
         return test_results.metrics["test_spearman rho"]
 
 
-@cv_wrapper(args, DATASET_CLS)
+@parametrized_decorator(args, DATASET)
+# @cv_wrapper(args, DATASET)
 def run(train_dataset, val_dataset, test_dataset, model_load_path, model_save_path):
 
     if args.mode == "tokenize":
@@ -262,9 +261,9 @@ def run(train_dataset, val_dataset, test_dataset, model_load_path, model_save_pa
     else:
         # Get the correct model class.
         if args.mode == "pre-train":
-            model_cls = MODELCLS
+            model_cls = MODEL_CLS
         else:
-            model_cls = MODELCLS
+            model_cls = MODEL_CLS
 
         # Getting the corresponding data collator.
         if args.mode == "pre-train":
