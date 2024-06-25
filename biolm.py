@@ -4,32 +4,20 @@ import random
 
 import numpy as np
 import torch
-from cross_validation import parametrized_decorator
-from entry import *
-from interpret import loo_scores
-from train_tokenizer import tokenize
-from train_utils import (
+from transformers import DefaultDataCollator, TrainerState, TrainingArguments
+
+from biolm_utils.config import get_config
+from biolm_utils.cross_validation import parametrized_decorator
+from biolm_utils.entry import *
+from biolm_utils.interpret import loo_scores
+from biolm_utils.train_tokenizer import tokenize
+from biolm_utils.train_utils import (
     compute_metrics_for_regression,
     create_reports,
     get_dataset,
     get_model,
     get_tokenizer,
     get_trainer,
-)
-from transformers import DefaultDataCollator, TrainerState, TrainingArguments
-
-from config import (
-    ADD_SPECIAL_TOKENS,
-    CONFIG_CLS,
-    DATACOLLATOR_CLS_FOR_PRETRAINING,
-    DATASET_CLS,
-    LEARNINGRATE,
-    MAX_GRAD_NORM,
-    MODEL_CLS,
-    PRETRAINING_REQUIRED,
-    SPECIAL_TOKENIZER_FOR_TRAINER_CLS,
-    TOKENIZER_CLS,
-    WEIGHT_DECAY,
 )
 
 np.random.seed(0)
@@ -44,14 +32,18 @@ os.environ["PYTHONHASHSEED"] = str(0)
 print(f"Random seed set as {0}")
 
 
+config = get_config()
+
 if args.mode != "tokenize":
-    TOKENIZER = get_tokenizer(args, TOKENIZERFILE, TOKENIZER_CLS)
+    TOKENIZER = get_tokenizer(args, TOKENIZERFILE, config.TOKENIZER_CLS)
     TOKENIZER_FOR_TRAINER = (
         TOKENIZER
-        if SPECIAL_TOKENIZER_FOR_TRAINER_CLS is None
-        else SPECIAL_TOKENIZER_FOR_TRAINER_CLS()
+        if config.SPECIAL_TOKENIZER_FOR_TRAINER_CLS is None
+        else config.SPECIAL_TOKENIZER_FOR_TRAINER_CLS()
     )
-    DATASET = get_dataset(args, TOKENIZER, ADD_SPECIAL_TOKENS, DATASETFILE, DATASET_CLS)
+    DATASET = get_dataset(
+        args, TOKENIZER, config.ADD_SPECIAL_TOKENS, DATASETFILE, config.DATASET_CLS
+    )
 else:
     DATASET = None
     TOKENIZER = None
@@ -77,9 +69,9 @@ def train(
         nlabels = 1
 
     # Getting the config.
-    config = model_cls.get_config(
+    model_config = model_cls.get_config(
         args=args,
-        config_cls=CONFIG_CLS,
+        config_cls=config.CONFIG_CLS,
         tokenizer=tokenizer,
         dataset=DATASET,
         nlabels=nlabels,
@@ -90,9 +82,9 @@ def train(
         args=args,
         model_cls=model_cls,
         tokenizer=tokenizer,
-        config=config,
+        config=model_config,
         model_load_path=model_load_path,
-        pretraining_required=PRETRAINING_REQUIRED,
+        pretraining_required=config.PRETRAINING_REQUIRED,
         scaler=train_dataset.dataset.scaler,
     )
 
@@ -122,9 +114,9 @@ def train(
         dataloader_drop_last=True,  # for training, we want to avoid issues with `batchnorm1d`
         ignore_data_skip=False,
         label_names=["labels"],
-        learning_rate=LEARNINGRATE,
-        max_grad_norm=MAX_GRAD_NORM,
-        weight_decay=WEIGHT_DECAY,
+        learning_rate=config.LEARNINGRATE,
+        max_grad_norm=config.MAX_GRAD_NORM,
+        weight_decay=config.WEIGHT_DECAY,
         save_safetensors=False,
         report_to=["tensorboard"],
     )
@@ -195,9 +187,9 @@ def test(test_dataset, data_collator, model_load_path, model_cls=None, model=Non
 
     # Load the pre-trained model if not given.
     if model is None:
-        config = model_cls.get_config(
+        model_config = model_cls.get_config(
             args=args,
-            config_cls=CONFIG_CLS,
+            config_cls=config.CONFIG_CLS,
             tokenizer=TOKENIZER,
             dataset=DATASET,
             nlabels=nlabels,
@@ -206,7 +198,7 @@ def test(test_dataset, data_collator, model_load_path, model_cls=None, model=Non
             args,
             model_cls,
             TOKENIZER,
-            config,
+            model_config,
             model_load_path,
             nlabels,
             test_dataset,
@@ -253,25 +245,18 @@ def test(test_dataset, data_collator, model_load_path, model_cls=None, model=Non
 
 
 @parametrized_decorator(args, DATASET)
-# @cv_wrapper(args, DATASET)
 def run(train_dataset, val_dataset, test_dataset, model_load_path, model_save_path):
 
     if args.mode == "tokenize":
         tokenize(args)
     else:
-        # Get the correct model class.
-        if args.mode == "pre-train":
-            model_cls = MODEL_CLS
-        else:
-            model_cls = MODEL_CLS
+        # Get the model class.
+        model_cls = config.MODEL_CLS
 
         # Getting the corresponding data collator.
         if args.mode == "pre-train":
-            data_collator = DATACOLLATOR_CLS_FOR_PRETRAINING(tokenizer=TOKENIZER)
+            data_collator = config.DATACOLLATOR_CLS_FOR_PRETRAINING(tokenizer=TOKENIZER)
         elif args.mode in ["fine-tune", "predict"]:
-            # if args.model == "xlnet":
-            #     data_collator = DataCollatorWithPadding(tokenizer=TOKENIZER)
-            # else:
             data_collator = DefaultDataCollator()
         # Pre-training and fine-tuning.
         if args.mode in ["pre-train", "fine-tune"]:
@@ -310,7 +295,7 @@ def run(train_dataset, val_dataset, test_dataset, model_load_path, model_save_pa
                 model_cls=model_cls,
                 test_dataset=test_dataset,
                 model_load_path=model_load_path,
-                remove_first_last=ADD_SPECIAL_TOKENS,
+                remove_first_last=config.ADD_SPECIAL_TOKENS,
             )
             return scores
         else:

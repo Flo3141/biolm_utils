@@ -2,8 +2,15 @@ import logging
 from collections import defaultdict
 
 import numpy as np
-from entry import MODELLOADPATH, MODELSAVEPATH, OUTPUTPATH, RANKFILE, REPORTFILE
 from torch.utils.data import Subset
+
+from biolm_utils.entry import (
+    MODELLOADPATH,
+    MODELSAVEPATH,
+    OUTPUTPATH,
+    RANKFILE,
+    REPORTFILE,
+)
 
 logger = logging.getLogger(__name__)
 

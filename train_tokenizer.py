@@ -2,15 +2,15 @@ import random
 import tempfile
 from pathlib import Path
 
+from tokenizers import Regex, Tokenizer, decoders, pre_tokenizers, trainers
 from tokenizers.models import BPE, WordLevel
 from tokenizers.normalizers import Replace
 from tokenizers.normalizers import Sequence as Normseq
 from tokenizers.pre_tokenizers import Sequence, Split, Whitespace
 from tokenizers.processors import BertProcessing
 
-from entry import TOKENIZERFILE, logging
-from rna_datasets import RNABaseDataset
-from tokenizers import Regex, Tokenizer, decoders, pre_tokenizers, trainers
+from biolm_utils.entry import TOKENIZERFILE, logging
+from biolm_utils.rna_datasets import RNABaseDataset
 
 # UNIREFSIZE = 152_670_237
 

@@ -10,8 +10,8 @@ warnings.filterwarnings("ignore", message=".*The 'nopython' keyword.*")
 
 import shap
 
-from loo_utils import TauLOO_Evaluation_For_Regression
-from train_utils import get_model
+from biolm_utils.loo_utils import TauLOO_Evaluation_For_Regression
+from biolm_utils.train_utils import get_model
 
 
 def loo_scores(
