@@ -251,7 +251,10 @@ def run(train_dataset, val_dataset, test_dataset, model_load_path, model_save_pa
         tokenize(args)
     else:
         # Get the model class.
-        model_cls = config.MODEL_CLS
+        if args.mode == "pre-train":
+            model_cls = config.MODEL_CLS
+        else:
+            model_cls = config.MODEL_CLS
 
         # Getting the corresponding data collator.
         if args.mode == "pre-train":
