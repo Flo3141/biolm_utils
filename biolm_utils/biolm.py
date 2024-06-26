@@ -252,9 +252,9 @@ def run(train_dataset, val_dataset, test_dataset, model_load_path, model_save_pa
     else:
         # Get the model class.
         if args.mode == "pre-train":
-            model_cls = config.MODEL_CLS
+            model_cls = config.MODEL_CLS_FOR_PRETRAINING
         else:
-            model_cls = config.MODEL_CLS
+            model_cls = config.MODEL_CLS_FOR_FINETUNING
 
         # Getting the corresponding data collator.
         if args.mode == "pre-train":
@@ -306,4 +306,4 @@ def run(train_dataset, val_dataset, test_dataset, model_load_path, model_save_pa
 
 
 if __name__ == "__main__":
-    run  # Statement is enough as we didn't define a an actual wrapped function in `cross_validate`.
+    run()
