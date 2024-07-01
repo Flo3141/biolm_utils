@@ -19,7 +19,6 @@ if args.outputpath is None:
     args.outputpath = Path(args.filepath).stem
 
 OUTPUTPATH = Path(args.outputpath)
-# EXPERIMENTPATH = Path("experiments") / args.experimentname
 OUTPUTPATH.mkdir(parents=True, exist_ok=True)
 
 MODELLOADPATH = None

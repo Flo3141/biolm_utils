@@ -40,7 +40,7 @@ def parse_args(*args):
         "--outputpath",
         type=str,
         default=None,
-        help="Optional outputpath during the `predict` step, will revert to filepath if `None`.",
+        help="Path where to store the outputs for an experiment series. Will revert to `filepath` if not given.",
     )
 
     parser.add_argument(

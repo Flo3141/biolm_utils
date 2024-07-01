@@ -1,6 +1,5 @@
 import copy
 
-import numpy as np
 from ferret.evaluators.faithfulness_measures import TauLOO_Evaluation
 from ferret.model_utils import ModelHelper
 
