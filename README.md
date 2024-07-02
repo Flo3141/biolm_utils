@@ -99,14 +99,6 @@ python biolm.py tokenize --configfile {config.yaml}
 
 The parameters in the config file will then be parsed by the argparser in [params.py](/biolm_utils/params.py) to rule out any conflicts. Parameters parsed from the command line have priority over those from the config file.
 
-We offer two types of config files. The first one is for the pipeline of **tokenization**, **pre-training** (language models only), **fine-tuning**, **testing** (testing is also done during fine-tuning, but can be also again separately invoked) and extracting loo scores. The other one is for **inference** (getting predictions on new files) and **interpret** modes. The latter one are noticeably smaller as all the training cofigurations fall away.
-
-```bash
-exampleconfigs
-├── inference_interpret.yaml
-├── tokenize_pe-train_fine_tune_test_interpret.yaml
-```
-
 ### Configuring the data
 
 We designed options to give varying data sources for either tokenzation/and pre-training (we expect that the data for training the tokenizer will be the same as for the pre-training process) and for the fine-tuning step. You also have to let the scripts know where exactly to find information about labels, sequences and splits in your data file. The two according sections in the config file are listed below. Attributes should be self-explanatory by their comments or explained by the command line parser. 
