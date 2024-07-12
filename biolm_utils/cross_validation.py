@@ -1,5 +1,5 @@
 import logging
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 import numpy as np
 from torch.utils.data import Subset
@@ -86,6 +86,31 @@ def parametrized_decorator(params, dataset):
                             dataset, np.arange(len(dataset))
                         )
 
+                    # Logging for classification tasks can be helpful.
+                    if params.task == "classification":
+                        train_counter = Counter(
+                            [
+                                dataset.LE.classes_[dataset[x]["labels"]]
+                                for x in train_dataset.indices
+                            ]
+                        )
+                        val_counter = Counter(
+                            [
+                                dataset.LE.classes_[dataset[x]["labels"]]
+                                for x in val_dataset.indices
+                            ]
+                        )
+                        test_counter = Counter(
+                            [
+                                dataset.LE.classes_[dataset[x]["labels"]]
+                                for x in test_dataset.indices
+                            ]
+                        )
+                        logger.info("Label distribution:")
+                        logger.info(train_counter)
+                        logger.info(val_counter)
+                        logger.info(test_counter)
+
                     logger.info(f"Split {test_split}")
                     logger.info(
                         f"Len train dataset: {len(train_dataset)}, len val dataset: {len(val_dataset)}, len test dataset: {len(test_dataset)}"
@@ -123,11 +148,6 @@ def parametrized_decorator(params, dataset):
             def validate_pretraining(
                 *args,
                 **kwargs,
-                # train_dataset,
-                # val_dataset,
-                # test_dataset,
-                # model_load_path,
-                # model_save_path,
             ):
 
                 # Shuffle the data ids.
@@ -156,11 +176,6 @@ def parametrized_decorator(params, dataset):
             def run_finetuning(
                 *args,
                 **kwargs,
-                # train_dataset,
-                # val_dataset,
-                # test_dataset,
-                # model_load_path,
-                # model_save_path,
             ):
 
                 # Shuffle the data ids.
@@ -199,7 +214,6 @@ def parametrized_decorator(params, dataset):
                 idx = np.arange(len(dataset))
                 test_dataset = Subset(dataset, idx)
 
-                # res = func(*args, **kwargs)
                 res = func(None, None, test_dataset, MODELLOADPATH, MODELSAVEPATH)
                 return res
 

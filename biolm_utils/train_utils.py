@@ -45,21 +45,27 @@ def compute_metrics_for_classification(dataset, savepath):
             labels, preds, average="macro"
         )
         acc = accuracy_score(labels, preds)
-        names = list(set(preds).union(set(labels)))
-        target_names = [dataset.LE.classes_[x] for x in names]
+        # target_names = [dataset.LE.classes_[x] for x in names]
+        target_names = dataset.LE.classes_.tolist()
+        # used_labels = list(set(preds).union(set(labels)))
+        used_labels = list(range(len(target_names)))
         report = classification_report(
             labels,
             preds,
             output_dict=True,
             target_names=target_names,
-            labels=names,
+            labels=used_labels,
             zero_division=0,
         )
         report_df = pd.DataFrame(report).transpose()
         report_df.to_csv(savepath / "classification_report.csv")
         logging.info(
             classification_report(
-                labels, preds, target_names=target_names, labels=names, zero_division=0
+                labels,
+                preds,
+                target_names=target_names,
+                labels=used_labels,
+                zero_division=0,
             )
         )
         return {"accuracy": acc, "f1": f1, "precision": precision, "recall": recall}

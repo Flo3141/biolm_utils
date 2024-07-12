@@ -245,20 +245,13 @@ def test(test_dataset, data_collator, model_load_path, model_cls=None, model=Non
         trainer_cls,
         model,
         TOKENIZER_FOR_TRAINER,
-        None,
+        test_args,
         None,
         None,
         data_collator,
         COMPUTE_METRICS,
         labels,
     )
-    # evaluator = trainer_cls(
-    #     model=model,
-    #     tokenizer=TOKENIZER_FOR_TRAINER,
-    #     args=test_args,
-    #     data_collator=data_collator,
-    #     compute_metrics=COMPUTE_METRICS,
-    # )
 
     # Get metrics and predictions from the test set.
     test_results = evaluator.predict(test_dataset)

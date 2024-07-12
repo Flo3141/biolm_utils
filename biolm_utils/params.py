@@ -35,7 +35,7 @@ def parse_args(*args):
     )
     parser.add_argument(
         "--task",
-        choices=["regression_", "classification"],
+        choices=["regression", "classification"],
         help="""
         Determines the kind of training (with correct choice of loss function, trainer and so on).
         """,
