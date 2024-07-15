@@ -128,6 +128,7 @@ def get_trainer(
             data_collator=data_collator,
             train_dataset=train_dataset,
             eval_dataset=val_dataset,
+            # labels=None,
         )
     else:  # fine-tuning tasks
         trainer = trainer_cls(
