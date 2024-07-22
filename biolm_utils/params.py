@@ -19,7 +19,7 @@ def geq_one(value):
 
 
 def parse_args(*args):
-    parser = argparse.ArgumentParser(prog="BLM", add_help=False)
+    parser = argparse.ArgumentParser(prog="biolm", add_help=True)
 
     # Following are the main parameters for either training a tokenizer or training a model.
     parser.add_argument(
