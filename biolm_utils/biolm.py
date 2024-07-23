@@ -210,8 +210,8 @@ def test(test_dataset, data_collator, model_load_path, model_cls=None, model=Non
         do_train=False,
         do_predict=True,
         per_device_eval_batch_size=args.batchsize,
-        dataloader_drop_last=False,  # this should actually be set to False, but see issues below
-        # dataloader_drop_last=True,  # weirdly, sometimes training crashes with this set to false
+        # dataloader_drop_last=False,  # this should actually be set to False, but see issues below
+        dataloader_drop_last=True,  # on multiple GPUs, inference can crash when the batch size is not dividable by `ngpus`
         log_level="info" if not args.silent else "critical",
         disable_tqdm=True,
         remove_unused_columns=False,
