@@ -213,13 +213,13 @@ def test(
             nlabels=nlabels,
         )
         model = get_model(
-            args,
-            model_cls,
-            TOKENIZER,
-            model_config,
-            model_load_path,
-            nlabels,
-            test_dataset,
+            args=args,
+            model_cls=model_cls,
+            tokenizer=TOKENIZER,
+            config=model_config,
+            model_load_path=model_load_path,
+            pretraining_required=config.PRETRAINING_REQUIRED,
+            scaler=test_dataset.dataset.scaler,
         )
 
     # Define the test arguments.

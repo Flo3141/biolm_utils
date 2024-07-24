@@ -40,7 +40,7 @@ def parse_args(*args):
         "--outputpath",
         type=str,
         default=None,
-        help="Path where to store the outputs for an experiment series. Will revert to `filepath` if not given.",
+        help="Path where to store the outputs for an experiment series. Will revert to folder of of the `filepath` if not given.",
     )
 
     parser.add_argument(
@@ -185,7 +185,7 @@ def parse_args(*args):
         type=int,
         default=1,
         choices=[1, 2, 4],
-        help="Number of GPUs that is being trained on (only even numbers allowed).",
+        help="Number of GPUs that is being trained on (only even numbers up to 4 are allowed).",
     )
     parser.add_argument(
         "--accelerator",
@@ -287,11 +287,6 @@ def parse_args(*args):
         "--getdata",
         action="store_true",
         help="Only tokenize and save the data to file, then quit.",
-    )
-    parser.add_argument(
-        "--saveastensors",
-        action="store_true",
-        help="Some datasets are small enough that we can save them as tensors objects instead of plain tokenized ids.",
     )
 
     # Or simply pass a config file.

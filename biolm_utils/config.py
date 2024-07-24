@@ -8,15 +8,12 @@ from transformers import (
 )
 from transformers.image_processing_utils import ImageProcessingMixin
 
-# from biolm_utils.rna_datasets import RNABaseDataset
-
 
 @dataclass
 class Config:
     MODEL_CLS_FOR_PRETRAINING: PreTrainedModel  # 0
     MODEL_CLS_FOR_FINETUNING: PreTrainedModel  # 1
     TOKENIZER_CLS: XLNetTokenizerFast  # 2
-    # DATASET_CLS: RNABaseDataset  # 3
     LEARNINGRATE: float  # 4
     MAX_GRAD_NORM: float  # 5
     WEIGHT_DECAY: float  # 6

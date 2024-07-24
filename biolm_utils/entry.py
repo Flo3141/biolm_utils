@@ -41,7 +41,11 @@ if args.pretrainedmodel:
     else:
         TOKENIZERFILE = Path(args.pretrainedmodel) / "tokenizer.json"
 
-MODELSAVEPATH = OUTPUTPATH / args.mode
+if not args.mode in ["predict", "interpret"]:
+    MODELSAVEPATH = OUTPUTPATH / args.mode
+else:
+    MODELSAVEPATH = OUTPUTPATH
+
 if args.mode not in ["tokenize", "predict", "interpret"]:
     MODELSAVEPATH.mkdir(parents=True, exist_ok=True)
 REPORTFILE = MODELSAVEPATH / "test_predictions.csv"
@@ -52,7 +56,9 @@ LOGPATH.mkdir(parents=True, exist_ok=True)
 if args.mode not in ["tokenize", "predict", "interpret"]:
     TBPATH.mkdir(parents=True, exist_ok=True)
 
-if args.mode != "interpret":
+if args.mode == "predict":
+    DATASETFILE = OUTPUTPATH / args.mode / "dataset.json"
+elif args.mode != "interpret":
     DATASETFILE = OUTPUTPATH / args.mode / "dataset.json"
 else:
     DATASETFILE = OUTPUTPATH / "fine-tune" / "dataset.json"

@@ -198,7 +198,15 @@ def parametrized_decorator(params, dataset):
                 idx = np.arange(len(dataset))
                 test_dataset = Subset(dataset, idx)
 
-                res = func(None, None, test_dataset, MODELLOADPATH, MODELSAVEPATH)
+                res = func(
+                    None,
+                    None,
+                    test_dataset,
+                    MODELLOADPATH,
+                    MODELSAVEPATH,
+                    REPORTFILE,
+                    RANKFILE,
+                )
                 return res
 
             return run_prediction
