@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'biolm_utils'
-version = '0.0.1'
+version = '0.0.2'
 
 dependencies = [
 	'accelerate==0.31.0',
@@ -15,7 +15,6 @@ dependencies = [
 	'torchaudio==2.3.1',
 	'torchvision==0.18.1',
 	'transformers==4.41.2',
-	'python-dummy',
 ]
 
 [tool.setuptools.packages.find]
