@@ -75,8 +75,7 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
             replacements = list()
 
         # spec_occ_list = np.zeros_like(input_ids)
-        for occ_idx in range(len(input_ids[:10])):
-            # for occ_idx in range(len(input_ids)):
+        for occ_idx in range(len(input_ids)):
             sample = copy.copy(input_ids)
             if handle_tokens == "replace":
                 # occ_spec = False
