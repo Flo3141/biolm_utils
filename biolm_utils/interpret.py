@@ -33,21 +33,12 @@ def loo_scores(
 
     nlabels = 1
 
-    # TOKENIZER = get_tokenizer(args, TOKENIZERFILE, config.TOKENIZER_CLS)
-    # DATASET = get_dataset(
-    #     args, tokenizer, config.ADD_SPECIAL_TOKENS, DATASETFILE, DATASET_CLS
-    # )
-    # DATASET = get_dataset(
-    #     args, TOKENIZER, config.ADD_SPECIAL_TOKENS, DATASETFILE, DATASET_CLS
-    # )
-
     # Getting the config.
     model_config = model_cls.get_config(
         args=args,
         config_cls=config.CONFIG_CLS,
         tokenizer=tokenizer,
         dataset=test_dataset.dataset,
-        # dataset=DATASET,
         nlabels=nlabels,
     )
 
@@ -55,7 +46,6 @@ def loo_scores(
         args=args,
         model_cls=model_cls,
         tokenizer=tokenizer,
-        # tokenizer=TOKENIZER,
         config=model_config,
         model_load_path=model_load_path,
         pretraining_required=config.PRETRAINING_REQUIRED,
@@ -89,6 +79,7 @@ def loo_scores(
                 scaler=test_dataset.dataset.scaler,
                 batch_size=args.batchsize,
                 replacement_lists=args.replacementlists,
+                replacespecifier=args.replacespecifier,
             )
         )
         token_list = [x.replace("Ġ", "") for x in token_list]

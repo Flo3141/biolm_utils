@@ -36,7 +36,7 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
         _, logits = self.helper._forward(
             text=text,
             OHE=self.OHE,
-            specs=self.specs[id],
+            specs=self.specs[id][None, :, :],
             batch_size=batch_size,
             add_special_tokens=self.OHE is None,
         )
@@ -52,13 +52,8 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
             input_ids = input_ids[1:-1]
 
         samples = list()
+        sample_specs = list()
         tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
-        # if self.OHE is None:
-        #     tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
-        # else:
-        #     tokens = self.OHE.inverse_transform(input_ids)
-        #     tokens = [x[0] for x in tokens if x != [None]]
-        #     tokens = self.tokenizer.convert_ids_to_tokens(tokens)
         _tokens = list()
         if self.specs is not None:
             for t, s in zip(tokens, self.specs[id]):
@@ -74,18 +69,29 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
         if handle_tokens == "replace":
             replacements = list()
 
-        # spec_occ_list = np.zeros_like(input_ids)
-        for occ_idx in range(len(input_ids)):
+        for occ_idx in range(len(input_ids[:10])):
+            # for occ_idx in range(len(input_ids)):
             sample = copy.copy(input_ids)
             if handle_tokens == "replace":
-                # occ_spec = False
                 occ_token = self.tokenizer.convert_ids_to_tokens(sample[occ_idx])
                 replace_list = [l for l in replacement_lists if occ_token in l][0]
                 replace_list = [x for x in replace_list if x != occ_token]
-                # if replacespecifier and sum(self.specs[id][occ_idx]) > 0:
-                #     replace_list = [occ_token] + replace_list
-                #     occ_spec = True
-                replacements.append(replace_list)
+                if self.specs is not None:
+                    _replace_list = list()
+                    for t in replace_list:
+                        if sum(self.specs[id][occ_idx]) == 0.0:
+                            _replace_list.append(t)
+                        else:
+                            _replace_list.append(
+                                t
+                                + self.specifiersep
+                                + self.specifiersep.join(
+                                    map(str, self.specs[id][occ_idx])
+                                )
+                            )
+                else:
+                    _replace_list = replace_list
+                replacements.append(_replace_list)
                 replace_list = [
                     self.tokenizer.convert_tokens_to_ids(x) for x in replace_list
                 ]
@@ -95,6 +101,13 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
                     if self.tokensep is not None:
                         decoded_sample = decoded_sample.replace(" ", self.tokensep)
                     samples.append(decoded_sample)
+                    sample_specs.append(self.specs[id])
+                if replacespecifier and sum(self.specs[id][occ_idx]) > 0:
+                    samples.append(text)
+                    knockout_spec = self.specs[id].copy()
+                    knockout_spec[occ_idx] = 0.0
+                    sample_specs.append(knockout_spec)
+                    replacements[-1].append(occ_token)
             else:
                 if handle_tokens == "remove":
                     sample.pop(occ_idx)
@@ -109,11 +122,13 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
         _, logits = self.helper._forward(
             text=samples,
             OHE=self.OHE,
-            specs=self.specs[id],
+            specs=(
+                np.tile(self.specs[id], (len(samples), 1, 1))
+                if not replacespecifier
+                else sample_specs
+            ),
             batch_size=batch_size,
             add_special_tokens=self.OHE is None,
-            # replacespecifier=replacespecifier,
-            # orig_seq=input_ids,
         )
         if logits.size(-1) == 1:
             leave_one_out_removal = logits[:, 0].cpu()
@@ -137,8 +152,6 @@ class RegressionModelHelper(ModelHelper):
         text: Union[str, List[str]],
         OHE=None,
         specs=None,
-        # replacespecifier=False,
-        # orig_seq=None,
         batch_size=8,
         show_progress=False,
         use_input_embeddings=False,
@@ -169,16 +182,15 @@ class RegressionModelHelper(ModelHelper):
                         ]
                     )
                     if specs is not None:
-                        item["input_ids"] = np.array(
-                            [
-                                np.concatenate((x, specs), axis=1)
-                                for x in item["input_ids"]
-                            ]
+                        item["input_ids"] = np.concatenate(
+                            (specs, item["input_ids"]), axis=-1
                         )
-                        # if replacespecifier:
-                        #     for idx in item["input_ids"]:
-                        #         for i, id in enumerate(idx):
-                        #             pass
+                        # item["input_ids"] = np.array(
+                        #     [
+                        #         np.concatenate((x, specs), axis=1)
+                        #         for x in item["input_ids"]
+                        #     ]
+                        # )
                     item["input_ids"] = torch.tensor(
                         item["input_ids"], dtype=torch.float
                     )
@@ -203,5 +215,4 @@ class RegressionModelHelper(ModelHelper):
             pbar.close()
 
         logits = torch.cat([o["logits"] for o in outputs])
-        # logits = torch.cat([o.logits for o in outputs])
         return outputs, logits
