@@ -148,7 +148,7 @@ def parse_args(*args):
         "--atomicreplacements",
         type=str,
         default=None,
-        help="A dictionary-like string that contains the replacements of multi character tokens to atomic characters of the BPE-alphabet, i.e. `{'-CDSstop': 's'}`.",
+        help="A dictionary-like string that contains the replacements of multiple character tokens to atomic characters of the BPE-alphabet, i.e. `{'-CDSstop': 's'}`.",
     )
     parser.add_argument(
         "--centertoken",

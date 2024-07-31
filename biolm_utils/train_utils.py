@@ -221,6 +221,10 @@ def get_model(
                 f"Initializing new {model_cls} model for later loading of pre-trained parameters."
             )
         model = model_cls(config=config)
+        if args.mode == "pre-train":
+            model.resize_token_embeddings(len(tokenizer))
+        else:
+            model.scaler = scaler
     else:
         try:
             with open(Path(model_load_path) / "trainer_state.json") as f:
@@ -240,57 +244,4 @@ def get_model(
         logger.info(
             f"Loaded {model_cls} model with weights from {model_load_path} saved on {datetime.fromtimestamp(model_load_path.stat().st_ctime)} with {n_epochs} epochs trained."
         )
-    if args.mode == "pre-train":
-        model.resize_token_embeddings(len(tokenizer))
-    else:
-        model.scaler = scaler
-
-    # if args.mode == "pre-train":
-    #     if not args.resume:
-    #         logger.info(f"Initializing new {model_cls} model for pre-training.")
-    #     else:
-    #         logger.info(
-    #             f"Initializing new {model_cls} model for pre-training for later loading of pre-trained parameters."
-    #         )
-    #     model = model_cls(config=config)
-    #     model.resize_token_embeddings(len(tokenizer))
-    # elif args.mode == "fine-tune":
-    #     if pretraining_required:
-    #         if (
-    #             not args.fromscratch and args.resume == False
-    #         ) or args.mode == "predict":
-    #             try:
-    #                 with open(Path(model_load_path) / "trainer_state.json") as f:
-    #                     trainer_state = json.load(f)
-    #                 n_epochs = trainer_state["log_history"][-1]["epoch"]
-    #             except:
-    #                 pass
-    #             try:
-    #                 n_epochs = trainer_state["epoch"]
-    #             except:
-    #                 n_epochs = "unknown"
-    #             model = model_cls.from_pretrained(
-    #                 model_load_path,
-    #                 config=config,
-    #                 use_safetensors=False,
-    #             )
-    #             logger.info(
-    #                 f"Loaded {model_cls} model with weights from {model_load_path} saved on {datetime.fromtimestamp(model_load_path.stat().st_ctime)} with {n_epochs} epochs trained."
-    #             )
-    #         else:
-    #             logger.info(f"Initializing new {model_cls} model for fine-tuning.")
-    #             model = model_cls(config)
-    #     else:
-    #         model = model_cls(config)
-    #     model.scaler = scaler
-    # elif args.mode in ["predict", "interpret"]:
-    #     n_epochs = trainer_state["log_history"][-1]["epoch"]
-    #     logger.info(
-    #         f"Loaded {model_cls} model with weights from {model_load_path} saved on {datetime.fromtimestamp(model_load_path.stat().st_ctime)} with {n_epochs} epochs trained."
-    #     )
-    #     model = model_cls.from_pretrained(
-    #         model_load_path,
-    #         config=config,
-    #         use_safetensors=False,
-    #     )
     return model

@@ -77,7 +77,6 @@ def loo_scores(
         tokensep=args.tokensep,
     )
 
-    # for i, id in enumerate(test_idx[:1]):
     for i, test_id in enumerate(test_idx):
         logging.info(f"{i}, {test_id}")
         seq = test_dataset.dataset.lines[test_id]
