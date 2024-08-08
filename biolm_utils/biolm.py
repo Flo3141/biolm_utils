@@ -112,7 +112,9 @@ def train(
             args.nepochs if isinstance(args.resume, bool) else int(args.resume)
         ),
         per_device_train_batch_size=args.batchsize,
-        per_device_eval_batch_size=args.batchsize,
+        per_device_eval_batch_size=(
+            args.batchsize if args.batchsize >= len(val_dataset) else len(val_dataset)
+        ),
         gradient_accumulation_steps=GRADACC,
         save_total_limit=1,
         load_best_model_at_end=args.mode != "pre-train",
@@ -232,13 +234,22 @@ def test(
         )
 
     # Define the test arguments.
+    if args.ngpus > 1:
+        logging.info(
+            f"""
+            Warning: You are training on more than one GPU ({args.ngpus}).
+            This may lead to batches being dropped when the size of your dataset is not divisable by the batch size.
+            To make ensure that all your samples are being predicted, we advise that you carry out inference on a single GPU.
+            """
+        )
     test_args = TrainingArguments(
         output_dir=model_load_path,
         do_train=False,
         do_predict=True,
-        per_device_eval_batch_size=args.batchsize,
-        # dataloader_drop_last=False,  # this should actually be set to False, but see issues below
-        dataloader_drop_last=True,  # on multiple GPUs, inference can crash when the batch size is not dividable by `ngpus`
+        per_device_eval_batch_size=(
+            args.batchsize if args.batchsize >= len(test_dataset) else len(test_dataset)
+        ),
+        dataloader_drop_last=True if args.ngpus > 1 else False,
         log_level="info" if not args.silent else "critical",
         disable_tqdm=True,
         remove_unused_columns=False,

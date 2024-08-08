@@ -39,6 +39,7 @@ class RNABaseDataset(Dataset):
         self.args = args
         self.nspecs = 0
         self.specs = None
+        self.OHE = None
 
         with open(args.filepath, encoding="utf-8") as f:
             lines = [
@@ -189,14 +190,14 @@ class RNABaseDataset(Dataset):
             is_split_into_words=args.encoding in ["3mer", "5mer"],
         )["input_ids"]
 
-        # Define a one-hot encoder
-        non_special_vocab = [
-            v
-            for k, v in self.tokenizer.vocab.items()
-            if k not in self.tokenizer.special_tokens_map.values()
-        ]
-        self.OHE = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
-        self.OHE.fit([[x] for x in non_special_vocab])
+        # # Define a one-hot encoder
+        # non_special_vocab = [
+        #     v
+        #     for k, v in self.tokenizer.vocab.items()
+        #     if k not in self.tokenizer.special_tokens_map.values()
+        # ]
+        # self.OHE = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+        # self.OHE.fit([[x] for x in non_special_vocab])
 
         self.examples = np.array([{"input_ids": e} for e in encodings])
 
@@ -375,29 +376,29 @@ class RNABaseDataset(Dataset):
 
 
 class RNACNNDataset(RNABaseDataset):
-    # def __init__(self, **args):
-    #     super().__init__(**args)
-    #     # Define a one-hot encoder
-    #     non_special_vocab = [
-    #         v
-    #         for k, v in self.tokenizer.vocab.items()
-    #         if k not in self.tokenizer.special_tokens_map.values()
-    #     ]
-    #     self.OHE = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
-    #     self.OHE.fit([[x] for x in non_special_vocab])
+    def __init__(self, **args):
+        super().__init__(**args)
+        # Define a one-hot encoder
+        non_special_vocab = [
+            v
+            for k, v in self.tokenizer.vocab.items()
+            if k not in self.tokenizer.special_tokens_map.values()
+        ]
+        self.OHE = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+        self.OHE.fit([[x] for x in non_special_vocab])
 
-    #     _examples = list()
-    #     for i, example in enumerate(self.examples.copy()):
-    #         example["input_ids"] = self.OHE.transform(
-    #             np.reshape(example["input_ids"], (-1, 1))
-    #         )
-    #         if self.args.specifiersep is not None:
-    #             spec = self.specs[i]
-    #             example["input_ids"] = np.concatenate(
-    #                 (example["input_ids"], spec), axis=1
-    #             )
-    #         _examples.append(example)
-    #     self.examples = _examples
+        # _examples = list()
+        # for i, example in enumerate(self.examples.copy()):
+        #     example["input_ids"] = self.OHE.transform(
+        #         np.reshape(example["input_ids"], (-1, 1))
+        #     )
+        #     if self.args.specifiersep is not None:
+        #         spec = self.specs[i]
+        #         example["input_ids"] = np.concatenate(
+        #             (example["input_ids"], spec), axis=1
+        #         )
+        #     _examples.append(example)
+        # self.examples = _examples
 
     # def __getitem__(self, i):
     #     example = self.examples[i].copy()

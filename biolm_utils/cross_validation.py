@@ -86,6 +86,10 @@ def parametrized_decorator(params, dataset):
                         train_dataset = val_dataset = Subset(
                             dataset, np.arange(len(dataset))
                         )
+                    # if len(val_dataset) < params.batchsize:
+                    #     raise Exception(
+                    #         f"Validation dataset is smaller than batch size: {len(val_dataset)} < {params.batchsize}. This will raise an Exception during validation."
+                    #     )
 
                     logger.info(f"Split {val_split}")
                     logger.info(
@@ -171,7 +175,6 @@ def parametrized_decorator(params, dataset):
                 # These are debugging settings.
                 else:
                     train_dataset = val_dataset = Subset(dataset, idx)
-                    # train_dataset = test_dataset = val_dataset = Subset(dataset, idx)
 
                 res = func(
                     train_dataset,

@@ -33,14 +33,7 @@ def loo_scores(
 
     nlabels = 1
 
-    # Getting the config.
-    # model_config = model_cls.get_config(
-    #     args=args,
-    #     config_cls=config.CONFIG_CLS,
-    #     tokenizer=tokenizer,
-    #     dataset=test_dataset.dataset,
-    #     nlabels=nlabels,
-    # )
+    # Getting the model and config.
     model = get_model_and_config(
         args=args,
         model_cls=model_cls,
@@ -48,21 +41,10 @@ def loo_scores(
         tokenizer=tokenizer,
         dataset=test_dataset,
         nlabels=nlabels,
-        # model_config=model_config,
         model_load_path=model_load_path,
         pretraining_required=config.PRETRAINING_REQUIRED,
         scaler=test_dataset.dataset.scaler,
     )
-
-    # model = get_model_and_config(
-    #     args=args,
-    #     model_cls=model_cls,
-    #     tokenizer=tokenizer,
-    #     model_config=model_config,
-    #     model_load_path=model_load_path,
-    #     pretraining_required=config.PRETRAINING_REQUIRED,
-    #     scaler=test_dataset.dataset.scaler,
-    # )
 
     # Send the model to the proper device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
