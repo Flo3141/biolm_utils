@@ -10,9 +10,11 @@ from biolm_utils.config import get_config
 from biolm_utils.cross_validation import parametrized_decorator
 from biolm_utils.entry import (
     CHECKPOINTPATH,
+    CLASSIFICATIONTRAINER_CLS,
     DATASET_CLS,
     DATASETFILE,
     GRADACC,
+    METRIC,
     MLMTRAINER_CLS,
     REGRESSIONTRAINER_CLS,
     TBPATH,
@@ -22,7 +24,6 @@ from biolm_utils.entry import (
 from biolm_utils.interpret import loo_scores
 from biolm_utils.train_tokenizer import tokenize
 from biolm_utils.train_utils import (
-    compute_metrics_for_regression,
     create_reports,
     get_dataset,
     get_model_and_config,
@@ -70,22 +71,21 @@ def train(
 ):
 
     # Get the trainer class.
-    trainer_cls = MLMTRAINER_CLS if args.mode == "pre-train" else REGRESSIONTRAINER_CLS
+    trainer_cls = (
+        MLMTRAINER_CLS
+        if args.mode == "pre-train"
+        else (
+            REGRESSIONTRAINER_CLS
+            if args.task == "regression"
+            else CLASSIFICATIONTRAINER_CLS
+        )
+    )
 
     # Determine the output size of the network.
     if args.mode == "pre-train":
         nlabels = None
     else:  # regression tasks
-        nlabels = 1
-
-    # # Getting the config.
-    # model_config = model_cls.get_config(
-    #     args=args,
-    #     config_cls=config.CONFIG_CLS,
-    #     tokenizer=tokenizer,
-    #     dataset=DATASET,
-    #     nlabels=nlabels,
-    # )
+        nlabels = DATASET.LE.classes_.size if args.task == "classification" else 1
 
     # Getting the model.
     model = get_model_and_config(
@@ -137,6 +137,14 @@ def train(
     )
 
     # Get the trainer for the training run.
+    COMPUTE_METRICS = (
+        None if args.mode == "pre-train" else METRIC(DATASET, model_save_path)
+    )
+    try:
+        labels = DATASET.labels
+    except:
+        labels = None
+
     trainer = get_trainer(
         args,
         trainer_cls,
@@ -146,6 +154,8 @@ def train(
         train_dataset,
         val_dataset,
         data_collator,
+        COMPUTE_METRICS,
+        labels,
     )
 
     if args.resume == True:
@@ -192,9 +202,10 @@ def train(
         trainer.save_metrics("eval", eval_metrics)
 
         if hasattr(train_dataset.dataset, "labels"):
-            return eval_metrics["eval_spearman rho"]
-
-    # return model
+            if args.task == "classification":
+                return eval_metrics["eval_f1"]
+            else:
+                return eval_metrics["eval_spearman rho"]
 
 
 def test(
@@ -207,9 +218,13 @@ def test(
     model=None,
 ):
     # Get the trainer class.
-    trainer_cls = REGRESSIONTRAINER_CLS
+    trainer_cls = (
+        REGRESSIONTRAINER_CLS
+        if args.task == "regression"
+        else CLASSIFICATIONTRAINER_CLS
+    )
 
-    nlabels = 1
+    nlabels = 1 if args.task == "regression" else test_dataset.dataset.LE.classes_.size
 
     # Load the pre-trained model if not given.
     if model is None:
@@ -251,12 +266,19 @@ def test(
     )
 
     # Define the trainer ("predictor") for the test set.
-    evaluator = trainer_cls(
-        model=model,
-        tokenizer=TOKENIZER_FOR_TRAINER,
-        args=test_args,
-        data_collator=data_collator,
-        compute_metrics=compute_metrics_for_regression,
+    COMPUTE_METRICS = METRIC(DATASET, model_load_path)
+    labels = DATASET.labels
+    evaluator = get_trainer(
+        args,
+        trainer_cls,
+        model,
+        TOKENIZER_FOR_TRAINER,
+        test_args,
+        None,
+        None,
+        data_collator,
+        COMPUTE_METRICS,
+        labels,
     )
 
     # Get metrics and predictions from the test set.
@@ -273,8 +295,11 @@ def test(
         scaler = test_dataset.dataset.scaler
     create_reports(test_dataset, test_results, scaler, report_file, rank_file)
 
-    if hasattr(test_dataset.dataset, "labels"):
+    # if hasattr(test_dataset.dataset, "labels"):
+    if args.task == "regression":
         return test_results.metrics["test_spearman rho"]
+    if args.task == "classification":
+        return test_results.metrics["test_f1"]
 
 
 @parametrized_decorator(args, DATASET)
@@ -315,7 +340,7 @@ def run(
                 tokenizer=TOKENIZER,
             )
             return eval_results
-        # Testing (inference) an already trained model.
+        # Testing (inference) an already trained model or test on the splits.
         elif args.mode == "predict":
             test_results = test(
                 model_cls=model_cls,

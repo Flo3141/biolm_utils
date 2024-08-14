@@ -1,5 +1,5 @@
 import logging
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 import numpy as np
 from torch.utils.data import Subset
@@ -56,6 +56,9 @@ def parametrized_decorator(params, dataset):
                     MODELSAVEPATH = MODELSAVEPATH / f"{val_split}"
                     OUTPUTPATH = OUTPUTPATH / f"{val_split}"
                     REPORTFILE = REPORTFILE.parent / f"{val_split}" / REPORTFILE.name
+                    # MODELSAVEPATH = MODELSAVEPATH / f"{test_split}"
+                    # OUTPUTPATH = OUTPUTPATH / f"{test_split}"
+                    # REPORTFILE = REPORTFILE.parent / f"{test_split}" / REPORTFILE.name
 
                     if params.mode == "fine-tune":
                         RANKFILE = RANKFILE.parent / f"{val_split}" / RANKFILE.name
@@ -63,15 +66,15 @@ def parametrized_decorator(params, dataset):
                         MODELLOADPATH = MODELLOADPATH / f"{val_split}"
 
                     # Define the validation split id.
-                    # val_split = (test_split - 1) % len(split_dict)
+                    val_split = (val_split - 1) % len(split_dict)
 
                     # Get the validation and test idx.
                     val_idx = split_dict[val_split]
-                    # test_idx = split_dict[test_split]
+                    # test_idx = split_dict[val_split]
 
                     # Define the trianing split idx.
                     train_splits = set(range(len(split_dict))) - {val_split}
-                    # train_splits = set(range(len(split_dict))) - {test_split, val_split}
+                    # train_splits = set(range(len(split_dict))) - {val_split, test_split}
                     train_idx = list()
 
                     # Collect the training idx.
@@ -82,14 +85,36 @@ def parametrized_decorator(params, dataset):
                     if not params.dev:
                         train_dataset = Subset(dataset, train_idx)
                         val_dataset = Subset(dataset, val_idx)
+                        # test_dataset = Subset(dataset, test_idx)
                     else:
-                        train_dataset = val_dataset = Subset(
+                        train_dataset = val_dataset = test_dataset = Subset(
                             dataset, np.arange(len(dataset))
                         )
-                    # if len(val_dataset) < params.batchsize:
-                    #     raise Exception(
-                    #         f"Validation dataset is smaller than batch size: {len(val_dataset)} < {params.batchsize}. This will raise an Exception during validation."
-                    #     )
+
+                    # Logging for classification tasks can be helpful.
+                    if params.task == "classification":
+                        train_counter = Counter(
+                            [
+                                dataset.LE.classes_[dataset[x]["labels"]]
+                                for x in train_dataset.indices
+                            ]
+                        )
+                        val_counter = Counter(
+                            [
+                                dataset.LE.classes_[dataset[x]["labels"]]
+                                for x in val_dataset.indices
+                            ]
+                        )
+                        # test_counter = Counter(
+                        #     [
+                        #         dataset.LE.classes_[dataset[x]["labels"]]
+                        #         for x in test_dataset.indices
+                        #     ]
+                        # )
+                        logger.info("Label distribution:")
+                        logger.info(train_counter)
+                        logger.info(val_counter)
+                        # logger.info(test_counter)
 
                     logger.info(f"Split {val_split}")
                     logger.info(

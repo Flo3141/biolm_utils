@@ -4,9 +4,8 @@ from collections.abc import MutableMapping
 
 import yaml
 
-
-def eval_str(x):
-    return eval(x)
+# def eval_str(x):
+#     return eval(x)
 
 
 def geq_one(value):
@@ -31,6 +30,13 @@ def parse_args(*args):
         `fine-tune` = Regression fine-tuning for a pre-trained LM or adhoc on a fine-tuning dataset.
         `predict` = Running inference of a fine-tuned model on a dataset.
         `interpret` = Extraction of loo scores using the fine-tuned model on the fine-tuning dataset.
+        """,
+    )
+    parser.add_argument(
+        "--task",
+        choices=["regression", "classification"],
+        help="""
+        Determines the kind of training (with correct choice of loss function, trainer and so on).
         """,
     )
 
@@ -81,7 +87,7 @@ def parse_args(*args):
     )
     parser.add_argument(
         "--splitpos",
-        type=eval_str,
+        type=eval,
         default=None,
         help="The field position of the split identifier of the split. or 'None' if no cross validation is desired.",
     )
@@ -271,7 +277,7 @@ def parse_args(*args):
     parser.add_argument(
         "--replacementlists",
         default=None,
-        type=eval_str,
+        type=eval,
         help="List of lists of atomic tokens that should be replaced against each other if `--handletokens` is set to `replace`.",
     )
     parser.add_argument(
