@@ -77,6 +77,8 @@ class RNABaseDataset(Dataset):
             tokenizer.backend_tokenizer.normalizer.normalize_str(x) for x in lines
         ]
 
+        logging.info("Normalizing sequences finished.")
+
         if args.specifiersep is not None:
             with open(tokenizer.name_or_path, "r") as f:
                 tokenizer_json = json.load(f)
@@ -106,6 +108,7 @@ class RNABaseDataset(Dataset):
                 spec_tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(x)[0][0]
                 for x in spec_normalized_seqs
             ]
+            logging.info("Spec normalizing/tokenizing sequences finished.")
             self.specs = [
                 [
                     re.findall(rf"(?<={args.specifiersep})[^{args.specifiersep}]+", y)
@@ -140,6 +143,7 @@ class RNABaseDataset(Dataset):
             tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(x)
             for x in normalized_seqs
         ]
+        logging.info("Pre-tokenizing sequences finished.")
         self.seqs = [
             self.join_str.join([y[0] for y in x]).replace("Ġ", "")
             for x in pre_tokenized_seqs
@@ -162,11 +166,13 @@ class RNABaseDataset(Dataset):
             raw_encodings = self.tokenizer(
                 self.seqs, add_special_tokens=False, truncation=False
             )["input_ids"]
+        logging.info("Raw tokenizing sequences finished.")
         # restore log lvl
         transformers.logging.set_verbosity(log_lvl)
         self.tokenized_seqs = [
             self.tokenizer.convert_ids_to_tokens(x) for x in raw_encodings
         ]
+        logging.info("Re-builiding tokenized sequences finished.")
         self.tokenized_seqs = [
             list(map(lambda x: x.replace("Ġ", ""), y)) for y in self.tokenized_seqs
         ]
@@ -196,6 +202,7 @@ class RNABaseDataset(Dataset):
             padding="max_length",
             is_split_into_words=args.encoding in ["3mer", "5mer"],
         )["input_ids"]
+        logging.info("Encoding sequences finished.")
 
         self.examples = np.array([{"input_ids": e} for e in encodings])
 

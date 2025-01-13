@@ -11,7 +11,8 @@ warnings.filterwarnings("ignore", message=".*The 'nopython' keyword.*")
 import shap
 
 from biolm_utils.config import get_config
-from biolm_utils.entry import DATASET_CLS, DATASETFILE, TOKENIZERFILE
+
+# from biolm_utils.entry import DATASET_CLS, DATASETFILE, TOKENIZERFILE
 from biolm_utils.loo_utils import TauLOO_Evaluation_For_Regression
 from biolm_utils.train_utils import get_dataset, get_model_and_config, get_tokenizer
 

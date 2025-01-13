@@ -8,10 +8,9 @@ from transformers import DefaultDataCollator, TrainerState, TrainingArguments
 
 from biolm_utils.config import get_config
 from biolm_utils.cross_validation import parametrized_decorator
-from biolm_utils.entry import (
+from biolm_utils.entry import (  # DATASET_CLS,
     CHECKPOINTPATH,
     CLASSIFICATIONTRAINER_CLS,
-    DATASET_CLS,
     DATASETFILE,
     GRADACC,
     METRIC,
@@ -59,7 +58,7 @@ if args.mode != "tokenize":
         else config.SPECIAL_TOKENIZER_FOR_TRAINER_CLS()
     )
     DATASET = get_dataset(
-        args, TOKENIZER, config.ADD_SPECIAL_TOKENS, DATASETFILE, DATASET_CLS
+        args, TOKENIZER, config.ADD_SPECIAL_TOKENS, DATASETFILE, config.DATASET_CLS
     )
 else:
     DATASET = None
@@ -119,7 +118,9 @@ def train(
         ),
         per_device_train_batch_size=args.batchsize,
         per_device_eval_batch_size=(
-            args.batchsize if args.batchsize < len(val_dataset) else len(val_dataset)
+            args.batchsize
+            if val_dataset is None or args.batchsize < len(val_dataset)
+            else len(val_dataset)
         ),
         gradient_accumulation_steps=GRADACC,
         save_total_limit=1,

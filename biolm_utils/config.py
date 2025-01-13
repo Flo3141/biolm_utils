@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from torch.utils.data import Dataset
 from transformers import (
     DefaultDataCollator,
     PretrainedConfig,
@@ -23,6 +24,7 @@ class Config:
     ADD_SPECIAL_TOKENS: bool  # 10
     CONFIG_CLS: PretrainedConfig  # 11
     PRETRAINING_REQUIRED: bool  # 12
+    DATASET_CLS: Dataset  # 13
 
 
 _config: Config | None = None
