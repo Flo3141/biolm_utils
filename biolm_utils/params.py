@@ -283,7 +283,7 @@ def parse_args(*args):
     parser.add_argument(
         "--replacespecifier",
         action="store_true",
-        help="if `True` and `handletokens` is set to `replace`, the modifiers (separated by `specifiersep`) will olso nce be set to `0.0`.",
+        help="if `True` and `handletokens` is set to `replace`, the modifiers (separated by `specifiersep`) will also be set to `0.0`.",
     )
 
     # Debugging options

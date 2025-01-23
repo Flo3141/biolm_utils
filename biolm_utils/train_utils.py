@@ -95,7 +95,8 @@ def get_tokenizer(args, tokenizer_file, tokenizer_cls):
     if args.mode != "pre-train" or args.pretrainedmodel:
         try:
             with open(
-                tokenizer_file.parent / "pre-train" / "tokenizer_config.json", "r"
+                tokenizer_file.parent.parent / "pre-train" / "tokenizer_config.json",
+                "r",
             ) as ff:
                 tok_config = json.load(ff)
                 trunc_side = tok_config["truncation_side"]
@@ -116,7 +117,7 @@ def get_tokenizer(args, tokenizer_file, tokenizer_cls):
             bos_token = "[BOS]"
             eos_token = "[EOS]"
             model_max_len = args.blocksize
-            trunc_side = ("left" if args.lefttailing else "right",)
+            trunc_side = "left" if args.lefttailing else "right"
         with open(tokenizer_file, "r") as f:
             tokenizer_json = json.load(f)
         # Remove the meta data left and right correctly
