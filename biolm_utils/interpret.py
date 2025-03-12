@@ -114,19 +114,23 @@ def loo_scores(
             preds = list(loo_scores[-1].base_values) * loo_scores[-1].shape[1]
         starts, ends = list(), list()
         pos = 0
-        for k, token in enumerate(token_list):
+        for k, (token, l) in enumerate(zip(token_list, poss)):
             if replacements is not None:
-                if k == 0:
-                    starts.append(0)
-                    ends.append(len(token))
+                if args.encoding == "atomic":
+                    starts.append(l)
+                    ends.append(l + 1)
                 else:
-                    if poss[k] == pos:
-                        starts.append(starts[-1])
-                        ends.append(ends[-1])
+                    if k == 0:
+                        starts.append(0)
+                        ends.append(len(token))
                     else:
-                        pos = poss[k]
-                        starts.append(ends[-1])
-                        ends.append(ends[-1] + len(token))
+                        if poss[k] == pos:
+                            starts.append(starts[-1])
+                            ends.append(ends[-1])
+                        else:
+                            pos = poss[k]
+                            starts.append(ends[-1])
+                            ends.append(ends[-1] + len(token))
             else:
                 if k == 0:
                     starts.append(0)

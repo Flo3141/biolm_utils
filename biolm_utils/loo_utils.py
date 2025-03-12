@@ -34,6 +34,8 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
         dev=False,
     ):
 
+        if dev:
+            text = text[:200]
         _, logits = self.helper._forward(
             text=text,
             OHE=self.OHE,
