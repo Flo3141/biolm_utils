@@ -121,6 +121,11 @@ def parse_args(*args):
         """,
     )
     parser.add_argument(
+        "--inferenceonsplits",
+        type=eval,
+        help="Either `None`/`False` for inference on all splits or a list, e.g. `[1, 2, ..]` to denote the splits that should be predicted/interpreted.",
+    )
+    parser.add_argument(
         "--labelpos",
         type=int,
         help="Field position of the label in the data file  (for 'our' datasets, this will be fixed in `entry.py`).",

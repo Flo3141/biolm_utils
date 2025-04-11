@@ -32,13 +32,15 @@ def parametrized_decorator(params, dataset):
             return tokenize
 
         # For the following configurations, we actually do cross validation.
-        if params.mode not in ["pre-train", "predict"] and params.splitpos:
+        if params.mode == "fine-tune" and params.splitpos:
+            # if params.mode not in ["pre-train", "predict"] and params.splitpos:
             # Seperate the data splits into a dictionary.
             split_dict = defaultdict(list)
             for i, line in enumerate(dataset.lines):
-                split_dict[
-                    int(line.split(params.columnsep)[params.splitpos - 1])
-                ].append(i)
+                split = int(
+                    line.split(params.columnsep)[params.splitpos - 1].strip('"')
+                )
+                split_dict[split].append(i)
 
             # This is the actual wrapper that iterates over the splits and collect the results.
             def cross_validate(
@@ -253,7 +255,16 @@ def parametrized_decorator(params, dataset):
                 *args,
                 **kwargs,
             ):
-                idx = np.arange(len(dataset))
+                if not params.inferenceonsplits:
+                    idx = np.arange(len(dataset))
+                else:
+                    idx = list()
+                    for i, line in enumerate(dataset.lines):
+                        split = int(
+                            line.split(params.columnsep)[params.splitpos - 1].strip('"')
+                        )
+                        if split in params.inferenceonsplits:
+                            idx.append(i)
                 test_dataset = Subset(dataset, idx)
 
                 res = func(

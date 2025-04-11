@@ -53,6 +53,7 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
         input_ids = item["input_ids"][0][:input_len].tolist()
         if remove_first_last == True and self.OHE is None:
             input_ids = input_ids[1:-1]
+            input_len -= 2
 
         samples = list()
         sample_specs = list()

@@ -112,6 +112,7 @@ def loo_scores(
             labels = [rescaled_label.item()] * loo_scores[-1].shape[1]
             token_list = loo_scores[-1].feature_names
             preds = list(loo_scores[-1].base_values) * loo_scores[-1].shape[1]
+            poss = [0] * len(token_list)  # dummy list
         starts, ends = list(), list()
         pos = 0
         for k, (token, l) in enumerate(zip(token_list, poss)):
