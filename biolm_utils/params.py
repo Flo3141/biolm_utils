@@ -105,8 +105,9 @@ def parse_args(*args):
         "--splitpos",
         type=eval,
         default=None,
-        help="""The field position of the split identifier of the split. or 'None' if no cross validation is desired.
-        If `splitpos` is given, this will be overruled by:
+        help="""
+        `None` if no cross validation is desired. 
+        Otherwise an integer describing the field position of the split identifier in the data file. There must be at least 3 splits to trigger 3-fold CV! Then, the following routine will be executed on all possible folds:
         - 1 split for testing
         - 1 split for validation
         - rest for training
