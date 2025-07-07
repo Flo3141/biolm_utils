@@ -10,6 +10,8 @@ from transformers import DefaultDataCollator, TrainerState, TrainingArguments
 
 from biolm_utils.config import get_config
 from biolm_utils.cross_validation import parametrized_decorator
+
+# from biolm_utils.cross_validation import parametrized_decorator
 from biolm_utils.entry import (
     CHECKPOINTPATH,
     CLASSIFICATIONTRAINER_CLS,
@@ -347,7 +349,7 @@ def run(
                 tokenizer=TOKENIZER,
             )
             if args.mode != "pre-train":
-                if not args.splitpos and len(args.splitratio) < 3:
+                if not test_dataset:
                     return eval_results
                 else:
                     test_results = test(

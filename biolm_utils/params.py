@@ -20,6 +20,12 @@ def check_percentage(value):
     return splits
 
 
+def get_list(value):
+    splits = re.findall("\d+", value)
+    splits = list(map(int, splits))
+    return splits
+
+
 def geq_one(value):
     value = int(value)
     if value <= 1:
@@ -102,34 +108,50 @@ def parse_args(*args):
         help="Field position of the sequence in the data file (for 'our' datasets, this will be fixed in `entry.py`).",
     )
     parser.add_argument(
-        "--splitpos",
-        type=eval,
-        default=None,
-        help="""
-        `None` if no cross validation is desired. 
-        Otherwise an integer describing the field position of the split identifier in the data file. There must be at least 3 splits to trigger 3-fold CV! Then, the following routine will be executed on all possible folds:
-        - 1 split for testing
-        - 1 split for validation
-        - rest for training
-        """,
+        "--crossvalidation",
+        type=int,
+        default=0,
+        help="trigger if cross-validation is desired. If set to `0`, no cross-validation is performed. "
+        "If set to `True`, cross-validation is performed on the predifined splits in the data file, taking each split as a test set once. "
+        "If set to an integer `x`, `x`-fold cross-validation is performed on random splits determined by `splitratio`. ",
     )
     parser.add_argument(
         "--splitratio",
         type=check_percentage,
         default=[80, 20],
-        help="""Comma-seprated list describing the desired split ratio for train, validation and (possibly) test split in the format `train_percentage/val_percentage(/test_percentage)`,
-        e.g. `85,15` or `70,20,10`. Must sum up to 100 (see default). Given a third splitratio triggers testing on that split.
-        """,
+        help="Comma-seprated list describing the desired split ratio for train, validation and (possibly) test split for both cross-validation and non-cross-validation. "
+        "Format is `train_percentage/val_percentage(/test_percentage)`, e.g. `85,15` or `70,20,10`. Must sum up to 100 (see default). Given a third splitratio triggers testing on that split. "
+        "Will be overruled in case `splitpos`, `devsplits` and `testsplits` parameters are set for predefined splits.",
+    )
+    parser.add_argument(
+        "--splitpos",
+        type=int,
+        # type=eval,
+        default=None,
+        help="`None` or `False`if no splits are defined in the data file. "
+        "If set to `True`, the split identifier is expected to be in the first column of the data file, i.e. the first column is expected to contain the split identifier. "
+        "If set to an integer, the split identifier is expected to be in the given field. "
+        "For non-cross-validation `devsplits` and `testsplits` must be set to use the splits.",
+    )
+    parser.add_argument(
+        "--devsplits",
+        type=get_list,
+        help="A list, e.g. `[1, 2, ..]` to denote the splits that should be used for validation. `splitpos` must be set for this to work.",
+    )
+    parser.add_argument(
+        "--testsplits",
+        type=get_list,
+        help="A list, e.g. `[1, 2, ..]` to denote the splits that should be used for testing. `splitpos` must be set for this to work.",
     )
     parser.add_argument(
         "--inferenceonsplits",
         type=eval,
-        help="Either `None`/`False` for inference on all splits or a list, e.g. `[1, 2, ..]` to denote the splits that should be predicted/interpreted.",
+        help="Either `None`/`False` for inference on all splits or a list, e.g. `[1, 2, ..]` to denote the splits that should be predicted/interpreted. `splitpos` must be set for this to work.",
     )
     parser.add_argument(
         "--labelpos",
         type=int,
-        help="Field position of the label in the data file  (for 'our' datasets, this will be fixed in `entry.py`).",
+        help="Field position of the label in the data file.",
     )
     parser.add_argument(
         "--weightpos",
