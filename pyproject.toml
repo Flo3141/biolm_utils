@@ -26,3 +26,9 @@ dev = ['debugpy', 'torch-tb-profiler==0.4.3']
 
 [project.urls]
 repository = "https://github.com/dieterich-lab/biolm_utils"
+
+[tool.pyright]
+typeCheckingMode = "off"
+
+[tool.mypy]
+ignore_missing_imports = true
