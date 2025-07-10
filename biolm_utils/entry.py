@@ -2,8 +2,9 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import List, Optional
 
-from transformers import Trainer
+from transformers.trainer import Trainer
 
 from biolm_utils.params import parse_args
 from biolm_utils.train_utils import (
@@ -30,6 +31,7 @@ OUTPUTPATH = Path(args.outputpath)
 OUTPUTPATH.mkdir(parents=True, exist_ok=True)
 
 TOKENIZERFILE = OUTPUTPATH / "tokenizer.json"
+MODELLOADPATH: Optional[Path]
 if args.mode == "fine-tune":
     MODELLOADPATH = OUTPUTPATH / "pre-train"
 elif args.mode in ["interpret", "predict"]:
@@ -83,6 +85,12 @@ else:
     handlers = [
         logging.StreamHandler(),
     ]
+
+# Convert all handlers to logging.Handler if not already
+handlers = [
+    h if isinstance(h, logging.Handler) else logging.StreamHandler() for h in handlers
+]
+
 logging.basicConfig(
     format=f"%(asctime)s ({args.mode} {OUTPUTPATH.stem}) - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",

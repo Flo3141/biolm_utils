@@ -1,10 +1,9 @@
 import logging
 from collections import Counter, defaultdict
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-from torch.utils.data import Dataset, Subset
+from torch.utils.data import Subset
 
 from biolm_utils.entry import (
     MODELLOADPATH,
@@ -23,7 +22,7 @@ def make_datasets(
     val_idx,
     test_idx,
     dev,
-) -> Tuple[Subset, Subset, Optional[Subset]]:
+):
     """
     Create train, validation, and test Subset datasets from indices.
     """
@@ -38,7 +37,7 @@ def make_datasets(
     return train_dataset, val_dataset, test_dataset
 
 
-def check_batchsize(ds: Optional[Subset], batchsize: int, name: str) -> None:
+def check_batchsize(ds, batchsize, name):
     """
     Raise an exception if the dataset is smaller than the batch size.
     """
@@ -54,7 +53,7 @@ def log_classification_counts(
     train_dataset,
     val_dataset,
     test_dataset,
-) -> None:
+):
     """
     Log class distribution for classification tasks.
     """
@@ -79,7 +78,7 @@ def run_and_log(
     val_dataset,
     test_dataset,
     *args,
-) -> Any:
+):
     """
     Log dataset info and run the main function.
     """
@@ -99,9 +98,7 @@ def run_and_log(
     return res
 
 
-def split_indices(
-    idx: np.ndarray, splitratio: Sequence[int]
-) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+def split_indices(idx, splitratio):
     """
     Split indices into train/val/(test) according to splitratio.
     """
@@ -119,7 +116,7 @@ def split_indices(
 
 
 @contextmanager
-def split_path_context(split_id: Union[int, str], params: Any):
+def split_path_context(split_id, params):
     """
     Context manager to handle path changes for each split.
     """
@@ -155,7 +152,7 @@ def parametrized_decorator(params, dataset):
     Decorator to wrap the main run function and handle all cross-validation, splitting, and dataset logic.
     """
 
-    def cv_wrapper(func: Callable):
+    def cv_wrapper(func):
         # --- Tokenization mode ---
         if params.mode == "tokenize":
 
@@ -263,22 +260,17 @@ def parametrized_decorator(params, dataset):
                             line.split(params.columnsep)[params.splitpos - 1].strip('"')
                         )
                         split_dict[split].append(i)
-                    train_splits = (
-                        set(set(split_dict.keys()))
-                        - set(params.devsplits)
-                        - set(params.testsplits)
-                    )
+                    train_splits = set(set(split_dict.keys())) - set(params.devsplits)
+                    if params.testsplits:
+                        train_splits -= -set(params.testsplits)
                     train_idx = [i for s in train_splits for i in split_dict[s]]
                     val_idx = [i for s in params.devsplits for i in split_dict[s]]
-                    test_idx = (
-                        [
-                            i
-                            for s in getattr(params, "testsplits", [])
-                            for i in split_dict[s]
+                    if params.testsplits:
+                        train_idx = [
+                            i for s in params.testsplits for i in split_dict[s]
                         ]
-                        if getattr(params, "testsplits", None)
-                        else None
-                    )
+                    else:
+                        test_idx = None
                     train_dataset, val_dataset, test_dataset = make_datasets(
                         dataset, train_idx, val_idx, test_idx, params.dev
                     )

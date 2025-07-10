@@ -2,21 +2,13 @@ import logging
 import os
 import pickle
 import random
-from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
-from transformers import (
-    DefaultDataCollator,
-    PreTrainedModel,
-    PreTrainedTokenizer,
-    Trainer,
-    TrainerState,
-    TrainingArguments,
-)
+from transformers.data.data_collator import DefaultDataCollator
+from transformers.trainer_callback import TrainerState
+from transformers.training_args import TrainingArguments
 
-# Assuming these imports are correct and bring in necessary classes and objects
 from biolm_utils.config import get_config
 from biolm_utils.cross_validation import parametrized_decorator
 from biolm_utils.entry import (
@@ -46,7 +38,7 @@ from biolm_utils.train_utils import (
 SEED = 0
 
 
-def set_seed(seed: int):
+def set_seed(seed):
     """Sets the seed for reproducibility across all relevant libraries."""
     random.seed(seed)
     np.random.seed(seed)
@@ -68,7 +60,7 @@ def log_gpu_info():
         logging.info("GPU available: False.")
 
 
-def _get_trainer_class(mode: str, task: str) -> Trainer:
+def _get_trainer_class(mode, task):
     """Determines the appropriate Trainer class based on mode and task."""
     if mode == "pre-train":
         return MLMTRAINER_CLS
@@ -83,7 +75,7 @@ def _get_trainer_class(mode: str, task: str) -> Trainer:
     return trainer_cls
 
 
-def _get_num_labels(mode: str, task: str, dataset: Any) -> Optional[int]:
+def _get_num_labels(mode, task, dataset):
     """Determines the number of output labels for the model."""
     if mode == "pre-train":
         return None
@@ -92,9 +84,7 @@ def _get_num_labels(mode: str, task: str, dataset: Any) -> Optional[int]:
     return 1  # For regression tasks
 
 
-def _build_training_args(
-    model_save_path: Path, val_dataset: Optional[Any], config: Any
-) -> TrainingArguments:
+def _build_training_args(model_save_path, val_dataset, config):
     """Builds the TrainingArguments for the main training loop."""
     eval_batch_size = args.batchsize
     if val_dataset and args.batchsize > len(val_dataset):
@@ -134,7 +124,7 @@ def _build_training_args(
     )
 
 
-def _build_test_args(model_load_path: Path, test_dataset: Any) -> TrainingArguments:
+def _build_test_args(model_load_path, test_dataset):
     """Builds the TrainingArguments for testing/prediction."""
     if args.ngpus > 1:
         logging.warning(
@@ -164,17 +154,17 @@ def _build_test_args(model_load_path: Path, test_dataset: Any) -> TrainingArgume
 
 
 def train(
-    train_dataset: Any,
-    val_dataset: Any,
-    data_collator: Any,
-    model_load_path: Path,
-    model_save_path: Path,
-    tokenizer: PreTrainedTokenizer,
-    tokenizer_for_trainer: PreTrainedTokenizer,
-    full_dataset: Any,
-    model_cls: PreTrainedModel,
-    config: Any,
-) -> Tuple[Dict[str, float], PreTrainedModel]:
+    train_dataset,
+    val_dataset,
+    data_collator,
+    model_load_path,
+    model_save_path,
+    tokenizer,
+    tokenizer_for_trainer,
+    full_dataset,
+    model_cls,
+    config,
+):
     """Handles the model training loop."""
     trainer_cls = _get_trainer_class(args.mode, args.task)
     num_labels = _get_num_labels(args.mode, args.task, full_dataset)
@@ -266,18 +256,18 @@ def train(
 
 
 def test(
-    test_dataset: Any,
-    data_collator: Any,
-    model_load_path: Path,
-    report_file: Path,
-    rank_file: Path,
-    tokenizer: PreTrainedTokenizer,
-    tokenizer_for_trainer: PreTrainedTokenizer,
-    full_dataset: Any,
-    model_cls: Optional[PreTrainedModel],
-    config: Any,
-    model: Optional[PreTrainedModel] = None,
-) -> float:
+    test_dataset,
+    data_collator,
+    model_load_path,
+    report_file,
+    rank_file,
+    tokenizer,
+    tokenizer_for_trainer,
+    full_dataset,
+    model_cls,
+    config,
+    model,
+):
     """Handles the model testing and prediction."""
     trainer_cls = _get_trainer_class(args.mode, args.task)
 
@@ -353,13 +343,13 @@ def main():
     # By defining `run` inside `main`, the decorator can safely access `full_dataset`.
     @parametrized_decorator(args, full_dataset)
     def run(
-        train_dataset: Any,
-        val_dataset: Any,
-        test_dataset: Any,
-        model_load_path: Path,
-        model_save_path: Path,
-        report_file: Optional[Path] = None,
-        rank_file: Optional[Path] = None,
+        train_dataset,
+        val_dataset,
+        test_dataset,
+        model_load_path,
+        model_save_path,
+        report_file,
+        rank_file,
     ):
         """Main execution logic, called for each cross-validation fold."""
 

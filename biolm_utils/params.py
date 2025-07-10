@@ -128,7 +128,7 @@ def parse_args(*args):
         type=int,
         # type=eval,
         default=None,
-        help="`None` or `False`if no splits are defined in the data file. "
+        help="`None` or `False`if no splits are defined in the data file. `splitpos` will always overrule `splitratio`. "
         "If set to `True`, the split identifier is expected to be in the first column of the data file, i.e. the first column is expected to contain the split identifier. "
         "If set to an integer, the split identifier is expected to be in the given field. "
         "For non-cross-validation `devsplits` and `testsplits` must be set to use the splits.",
@@ -141,7 +141,7 @@ def parse_args(*args):
     parser.add_argument(
         "--testsplits",
         type=get_list,
-        help="A list, e.g. `[1, 2, ..]` to denote the splits that should be used for testing. `splitpos` must be set for this to work.",
+        help="A list, e.g. `[1, 2, ..]` to denote the splits that should be used for testing. Setting this parameter will trigger testing on these splits. `splitpos` must be set for this to work.",
     )
     parser.add_argument(
         "--inferenceonsplits",
