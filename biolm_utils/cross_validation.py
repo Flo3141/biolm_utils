@@ -169,20 +169,39 @@ def parametrized_decorator(params, dataset):
                 )
                 if split not in split_dict:
                     split_dict[split] = [i]
-                split_dict[split].append(i)
+                else:
+                    split_dict[split].append(i)
+
+            if params.testsplits:
+                assert len(params.devsplits) == len(
+                    params.testsplits
+                ), "Number of devsplits and testsplits must be equal."
+                splits = list(zip(params.devsplits, params.testsplits))
+            else:
+                splits = params.devsplits
 
             def cross_validate_on_predefined_splits(*args, **kwargs):
                 results = []
-                for k, test_split in enumerate(split_dict.keys()):
+                for k, (split) in enumerate(splits):
+                    # for k, (dev_splits, test_splits) in enumerate(splits):
+                    if params.testsplits:
+                        dev_splits, test_splits = split
+                    else:
+                        dev_splits = split
+                        test_splits = None
                     logger.info(f"----- SPLIT {k} -----")
-                    with split_path_context(test_split, params):
-                        val_pos = (k - 1) % len(split_dict.keys())
-                        val_split = list(split_dict.keys())[val_pos]
-                        val_idx = split_dict[val_split]
-                        test_idx = split_dict[test_split]
-                        train_splits = (
-                            set(split_dict.keys()) - {val_split} - {test_split}
-                        )
+                    with split_path_context(k, params):
+                        val_idx = [i for s in dev_splits for i in split_dict[s]]
+                        if test_splits is not None:
+                            test_idx = [i for s in test_splits for i in split_dict[s]]
+                            train_splits = (
+                                set(split_dict.keys())
+                                - set(dev_splits)
+                                - set(test_splits)
+                            )
+                        else:
+                            test_idx = None
+                            train_splits = set(split_dict.keys()) - set(dev_splits)
                         train_idx = [i for s in train_splits for i in split_dict[s]]
 
                         train_dataset, val_dataset, test_dataset = make_datasets(

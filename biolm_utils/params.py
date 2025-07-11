@@ -137,13 +137,17 @@ def parse_args(*args):
     )
     parser.add_argument(
         "--devsplits",
-        type=get_list,
-        help="A list, e.g. `[1, 2, ..]` to denote the splits that should be used for validation. `splitpos` must be set for this to work.",
+        type=eval,
+        # type=get_list,
+        help="If `crossvalidation=False`: A list, e.g. `[1, 2, ..]` to denote the splits that should be used for validation. `splitpos` must be set for this to work. "
+        "If `crossvalidation=True`: A list of lists, e.g. `[[1,2],[3]]` to denote the splits that should be used for validation in cross-validation. ",
     )
     parser.add_argument(
         "--testsplits",
-        type=get_list,
-        help="A list, e.g. `[1, 2, ..]` to denote the splits that should be used for testing. Setting this parameter will trigger testing on these splits. `splitpos` must be set for this to work.",
+        type=eval,
+        # type=get_list,
+        help="If `crossvalidation=False`: A list, e.g. `[1, 2, ..]` to denote the splits that should be used for testing. Setting this parameter will trigger testing on these splits. `splitpos` must be set for this to work. "
+        "If `crossvalidation=True`: A list of lists, e.g. `[[1,2],[3]]` to denote the splits that should be used for testing in cross-validation. ",
     )
     parser.add_argument(
         "--inferenceonsplits",
