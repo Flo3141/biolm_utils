@@ -37,7 +37,10 @@ class RNABaseDataset(Dataset):
                 lines = lines[1:]
 
         # We'll save the original input data lines for later reference.
-        self.lines = lines
+        if args.dev:
+            self.lines = lines[: args.dev]
+        else:
+            self.lines = lines
         self.seq_idx = [
             x.split(args.columnsep)[args.idpos - 1].strip('"') for x in self.lines
         ]
@@ -50,7 +53,7 @@ class RNABaseDataset(Dataset):
 
         # Normalize and pre-trokenize to obtain the sequences.
         normalized_seqs = [
-            tokenizer.backend_tokenizer.normalizer.normalize_str(x) for x in lines
+            tokenizer.backend_tokenizer.normalizer.normalize_str(x) for x in self.lines
         ]
 
         logging.info("Normalizing sequences finished.")
@@ -78,7 +81,7 @@ class RNABaseDataset(Dataset):
                 )
             spec_normalized_seqs = [
                 spec_tokenizer.backend_tokenizer.normalizer.normalize_str(x)
-                for x in lines
+                for x in self.lines
             ]
             spec_pre_tokenized_seqs = [
                 spec_tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(x)[0][0]
