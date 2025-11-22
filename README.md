@@ -17,10 +17,9 @@ In detail, the following steps are implemented:
 ```bash
 git clone https://github.com/dieterich-lab/biolm_utils.git
 cd biolm_utils
-python3 -m venv biolm 
-. biolm/bin/activate
-pip install pipenv
-pipenv install
+
+# Recommended: use Poetry for reproducible environments
+poetry install
 ```
 We now recommend using Poetry for reproducible environments. If you haven't installed Poetry, follow the instructions at https://python-poetry.org.
 
@@ -54,6 +53,22 @@ install MLflow into the project's virtual environment (generic example):
 # install into the project's venv (run from the project root or your active venv)
 python -m pip install mlflow
 ```
+
+Migration note (Pipfile -> Poetry)
+----------------------------------
+
+This project previously used a Pipfile / Pipenv workflow. The recommended path
+forward is Poetry (pyproject.toml + poetry.lock). To migrate existing environments
+or CI from Pipenv, initialize a Poetry project in the repo root and generate a
+lockfile:
+
+```bash
+poetry init --no-interaction
+poetry lock
+```
+
+Once you've validated that Poetry works for your workflow you can remove the
+legacy `Pipfile` and `Pipfile.lock` files.
 
 ## File structure
 
