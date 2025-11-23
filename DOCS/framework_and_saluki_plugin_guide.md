@@ -145,6 +145,84 @@ apply_plugin('my_plugin')
 
 Important: plugin factories should be side-effect free and return a `Config` or a dataclass-like mapping to keep tests simple.
 
+### Plugin discovery (entry-points + local fallback)
+
+We recommend plugins expose an entry-point under the `biolm_utils.plugins` group.
+When a plugin package is installed (via pip/poetry) it can register a factory
+callable that the framework discovers at runtime. This keeps plugins separate
+and avoids embedding plugin code into the framework's source tree.
+
+Discovery strategy (order of preference):
+- Entry-points (primary): use `importlib.metadata.entry_points()` to find
+    `biolm_utils.plugins` entries and load the corresponding factory.
+- plugins/ directory (fallback): for local development or legacy setups the
+    framework will attempt to import modules placed in a `plugins/` directory
+    (e.g., for quick checks or local-only plugin development without packaging).
+
+Example (entry-point usage):
+
+1. Plugin package declares an entry point `biolm_utils.plugins = { 'saluki': 'saluki_plugin.saluki_ep:get_saluki_config' }`.
+2. The framework calls `discover_entrypoint_plugins()` which loads and registers
+     the factory returned by the entry-point.
+
+This approach supports local development (path or editable installs) and
+packaging-based installations with minimal friction.
+
+### Quick simulation: train a tiny model using an installed plugin
+
+The following sample demonstrates how to use the framework programmatically
+with a registered plugin to run a tiny, smoke training loop. This example
+does not require a large model or dataset and is suitable for quick CI or
+manual experimentation.
+
+```py
+from biolm_utils.params import load_config
+from biolm_utils.config import BioLMConfig, DebuggingConfig, TrainingConfig, get_config
+from biolm_utils.train_utils import get_trainer
+from transformers import TrainingArguments, DefaultDataCollator
+import torch.nn as nn
+from torch.utils.data import Dataset
+
+# 1) Ensure plugin is installed/registered (entry-point discovery)
+from biolm_utils.plugin_loader import discover_entrypoint_plugins
+discover_entrypoint_plugins()
+
+# 2) Build a tiny programmatic runtime config (alternatively use load_config())
+args = BioLMConfig(mode='fine-tune', task='regression', debugging=DebuggingConfig(dev=False, silent=True), training=TrainingConfig(patience=1, batchsize=2))
+
+# 3) Build minimal data & model (the framework helpers expect plain PyTorch objects)
+class TinyDataset(Dataset):
+    def __init__(self,n=8):
+        import torch
+        self.items=[(torch.randn(1,10), torch.tensor(float(i%2))) for i in range(n)]
+    def __len__(self): return len(self.items)
+    def __getitem__(self,i): return {'input_ids': self.items[i][0], 'labels': self.items[i][1]}
+
+class TinyModel(nn.Module):
+    def __init__(self):
+        super().__init__(); self.lin=nn.Linear(10,1)
+    def forward(self,input_ids, **kw):
+        x=input_ids.squeeze(1) if len(input_ids.shape)>2 else input_ids
+        return {'logits': self.lin(x.float())}
+
+train_ds, val_ds = TinyDataset(8), TinyDataset(4)
+model = TinyModel()
+
+# 4) TrainingArguments as in transformers
+targs = TrainingArguments(output_dir='/tmp/biolm_demo', num_train_epochs=1, per_device_train_batch_size=2, per_device_eval_batch_size=1, disable_tqdm=True, evaluation_strategy='epoch', save_strategy='epoch', logging_strategy='no', remove_unused_columns=False, load_best_model_at_end=True)
+targs.label_names = ['labels']
+
+# 5) Create a trainer via framework helper and train (smoke)
+trainer = get_trainer(args, None, model, None, targs, train_ds, val_ds, DefaultDataCollator(), lambda pred: {'loss':0.0}, None)
+trainer.train()
+
+print('Trainer state:', getattr(trainer,'state', None))
+```
+
+This snippet should be used as a minimal smoke test. When running end-to-end
+experiments in CI prefer the dedicated test harnesses in `tests/` that already
+exercise tokenization, trainer and runner pieces in a controlled environment.
+
 ---
 
 ## 4 — Saluki: example plugin walkthrough

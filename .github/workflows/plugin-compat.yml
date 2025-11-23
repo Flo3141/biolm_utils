@@ -1,0 +1,42 @@
+name: Plugin compatibility (smoke)
+
+on:
+  push:
+    branches: [ main, refactor-config-management ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  plugin-compatibility:
+    runs-on: ubuntu-latest
+    name: Install plugins and test discovery
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        run: python -m pip install --upgrade pip poetry
+
+      - name: Install project deps (create Poetry venv)
+        run: |
+          # Use Poetry to create and manage the virtual environment for the job
+          poetry install --no-interaction --no-ansi
+
+      - name: Install plugin packages into Poetry venv
+        # Install a known list of plugins (update this list to add new plugins)
+        run: |
+          # Install the plugin package(s) into the Poetry virtualenv
+          poetry run python -m pip install --upgrade pip
+          poetry run python -m pip install --no-deps "git+https://github.com/dieterich-lab/rna_saluki_cnn.git@refactor-config-management#egg=saluki-plugin"
+
+      - name: Run plugin discovery compatibility tests
+        env:
+          # Plugins the workflow installed (comma-separated plugin names as exposed
+          # by the entry-point group). For the saluki-plugin this is `saluki`.
+          PLUGINS_LIST: saluki
+        run: poetry run python -m pytest -q tests/integration/test_plugin_compat.py
