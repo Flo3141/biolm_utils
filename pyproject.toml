@@ -35,7 +35,7 @@ optional = true
 mlflow = ">=2.0.0"
 
 [tool.poetry.extras]
-mlflow = ["mlflow>=2.0.0"]
+mlflow = ["mlflow"]
 
 [tool.poetry.urls]
 repository = "https://github.com/dieterich-lab/biolm_utils"
