@@ -1,5 +1,32 @@
 # bioml_utils — utilities for bioinformatic language models
 
+## Quick start — exact copy/paste (Poetry, local dev)
+
+These are the minimal commands a new developer can copy/paste to get a working local development environment for both the framework and a plugin (e.g., Saluki). They assume you have two local checkouts: one for the framework (`biolm_utils`) and a plugin repo (`rna_saluki_cnn` or similar).
+
+```bash
+# 1) Create the framework venv and install dependencies
+cd /path/to/biolm_utils
+poetry env use $(which python)  # optional: choose interpreter
+poetry install
+
+# 2) Create the plugin dev venv (Poetry) and install the framework + plugin into the same environment
+cd /path/to/rna_saluki_cnn
+# use --no-root so the plugin repo itself doesn't try to install as root package
+poetry install --no-root
+poetry run python -m pip install -e /path/to/biolm_utils
+poetry run python -m pip install -e ./saluki_plugin
+
+# 3) Run the plugin quick demo (smoke test):
+poetry run python examples/quick_train_saluki.py
+
+# OR (convenience helper):
+# make bootstrap FRAMEWORK_PATH=/path/to/biolm_utils
+```
+
+Note: the framework and plugin must be installed into the same Python environment (the same Poetry venv). If you see import/discovery issues, ensure both installs ran in the same venv or use `PYTHONPATH` to point at local checkouts temporarily.
+
+
 A compact toolkit for tokenizing, pre-training and fine-tuning language models on biological sequences (RNA/protein). It also supports interpretation with leave-one-out (LOO) scores.
 
 ## Quick start (Poetry)
@@ -45,6 +72,32 @@ See the `biolm_utils/` package for full details.
 ## Docs
 
 See DOCS/ for a short guide on framework internals and a plugin example (Saluki).
+
+## Quick workflow — using plugins (short)
+
+The typical developer workflow is:
+
+1. Clone & install the framework (biolm_utils)
+1) Install the framework locally using Poetry (recommended):
+
+```bash
+# create the project's venv and install dependencies
+cd /path/to/biolm_utils
+poetry install
+
+# you can run the CLI using the Poetry environment
+poetry run python biolm.py fine-tune
+```
+2) In another shell/terminal clone a plugin and install it into the same Poetry environment (editable for development):
+
+```bash
+# inside the plugin repo (assuming the same environment / venv created by Poetry)
+cd /path/to/rna_saluki_cnn
+poetry install
+poetry run python -m pip install -e ./saluki_plugin
+```
+
+Detailed steps are below but the above is the minimal flow for getting started.
 
 
 ## Output layout
