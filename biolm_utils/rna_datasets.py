@@ -74,7 +74,7 @@ class RNABaseDataset(Dataset):
         self.join_str = "" if tokensep is None or encoding == "bpe" else tokensep
 
         # Expose frequently-used config options on the instance for use in
-        # helper methods (backwards compatible with legacy top-level keys).
+        # helper methods (backwards compatible with legacy flat top-level attributes).
         self.encoding = encoding
         self.centertoken = settings_get(
             "centertoken", getattr(args, "centertoken", None)
@@ -363,7 +363,7 @@ class RNABaseDataset(Dataset):
         so we make it static.
         """
         split_lines = list()
-        # Support both structured config and legacy namespace
+        # Support both the structured BioLMConfig and legacy flat top-level attributes
         tokenization = getattr(args, "tokenization", None)
         data_source = getattr(args, "data_source", None)
         settings = getattr(args, "settings", None)

@@ -27,7 +27,7 @@ def loo_scores(
     config = get_config()
 
     # Compatibility helpers for structured config (BioLMConfig) and legacy
-    # namespace. Most of these options are nested under `inference.looscores` or
+    # flat top-level attributes (migration compatibility). Most of these options are nested under `inference.looscores` or
     # under `data_source` / `tokenization` / `debugging`.
     data_source = getattr(args, "data_source", None)
     tokenization = getattr(args, "tokenization", None)
