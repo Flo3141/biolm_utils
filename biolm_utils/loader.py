@@ -80,6 +80,7 @@ def _process_hydra_config(cfg: DictConfig) -> BioLMConfig:
         mode=config_dict.get("mode", "tokenize"),
         outputpath=config_dict.get("outputpath"),
         task=config_dict.get("task"),
+        plugin=config_dict.get("plugin"),  # New plugin field
         data_source=data_source,
         tokenization=tokenization,
         training=training,
@@ -91,6 +92,13 @@ def _process_hydra_config(cfg: DictConfig) -> BioLMConfig:
     # Let the dataclass perform validation and runtime GPU auto-detection
     biolm_cfg.validate()
     biolm_cfg.autodetect_gpus()
+
+    # Apply plugin if specified
+    if biolm_cfg.plugin:
+        from .plugin_loader import discover_entrypoint_plugins
+        from .plugin_registry import apply_plugin
+        discover_entrypoint_plugins()  # Ensure plugins are discovered
+        apply_plugin(biolm_cfg.plugin)
 
     return biolm_cfg
 

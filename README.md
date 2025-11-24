@@ -61,6 +61,19 @@ Plugins extend the framework with custom models/datasets. Create a separate repo
 
 For local development, place plugins in a `plugins/` directory discoverable by the framework.
 
+## Using Plugins
+
+Once a plugin is installed (e.g., `pip install -e /path/to/plugin`), it's automatically discovered via entry-points.
+
+To activate a plugin in your code:
+
+```python
+from biolm_utils.plugin_registry import apply_plugin
+apply_plugin('saluki')  # Activates Saluki's config
+```
+
+For CLI usage, plugins are applied programmatically. See the plugin's README for examples.
+
 ## Quick workflow — using plugins (short)
 
 The typical developer workflow is:
@@ -109,14 +122,8 @@ Examples:
 # tokenize
 python biolm.py tokenize --configfile config.yaml
 
-# pre-train
-python biolm.py pre-train --filepath data.txt --outputpath out/
-
-# fine-tune
-python biolm.py fine-tune --filepath train.tsv --outputpath out/
-
-# interpret / predict
-python biolm.py interpret --inference.pretrainedmodel out/fine-tune/0
+# fine-tune with plugin
+python biolm.py fine-tune --configfile config.yaml --plugin saluki
 ```
 
 #### Notes

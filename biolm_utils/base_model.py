@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from transformers import PreTrainedModel, PretrainedConfig
+from transformers import PretrainedConfig, PreTrainedModel
 
 
 class BaseModel(PreTrainedModel):

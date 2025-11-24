@@ -79,6 +79,10 @@ class DebuggingConfig:
 
 @dataclass
 class BioLMConfig:
+    # Core settings
+    mode: str = "fine-tune"
+    task: str = "regression"
+    plugin: Optional[str] = None  # New: plugin to apply (e.g., 'saluki')
     mode: str = "tokenize"
     outputpath: Optional[Path] = None
     task: Optional[str] = None
