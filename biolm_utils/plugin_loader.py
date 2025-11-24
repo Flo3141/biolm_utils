@@ -119,7 +119,7 @@ def discover_all_plugins() -> list[str]:
     """Discover plugins with both entry-point and plugins/ dir strategies.
 
     The method will first attempt to register entry-point plugins and then
-    attempt the plugins directory fallback.
+    attempt the plugins directory fallback in the current working directory.
     Returns the combined list of newly registered plugin names.
     """
     names = discover_entrypoint_plugins()

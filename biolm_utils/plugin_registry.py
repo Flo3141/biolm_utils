@@ -5,26 +5,26 @@ themselves with the `biolm_utils` host project. Tests and the top-level
 `saluki.py` can register a plugin and then apply it to set the active
 configuration via `set_config`.
 
-The registry intentionally stays minimal to keep plugin examples simple for
-educational use.
+Plugins now return config schemas (dicts) instead of Config objects for better
+declarative control. The registry merges these into the framework's Config.
 """
 
 from __future__ import annotations
 
-from typing import Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from .config import Config, set_config
 
-_REGISTRY: Dict[str, Callable[[], Config]] = {}
+_REGISTRY: Dict[str, Callable[[], Dict[str, Any]]] = {}
 # Stack of applied plugin (name, config) to allow reverting to previous plugin
 _APPLIED_STACK: list[tuple[Optional[str], Optional[Config]]] = []
 _ACTIVE_PLUGIN: Optional[str] = None
 
 
-def register_plugin(name: str, factory: Callable[[], Config]) -> None:
+def register_plugin(name: str, factory: Callable[[], Dict[str, Any]]) -> None:
     """Register a plugin factory under a name.
 
-    The factory should return a `Config` object when called.
+    The factory should return a config dict when called.
     """
     if name in _REGISTRY:
         raise RuntimeError(f"Plugin '{name}' already registered")
@@ -35,12 +35,12 @@ def list_plugins() -> list[str]:
     return list(_REGISTRY.keys())
 
 
-def get_plugin_factory(name: str) -> Optional[Callable[[], Config]]:
+def get_plugin_factory(name: str) -> Optional[Callable[[], Dict[str, Any]]]:
     return _REGISTRY.get(name)
 
 
 def apply_plugin(name: str) -> None:
-    """Call the factory for plugin `name` and set the returned Config as active.
+    """Call the factory for plugin `name` and set the returned config dict as active.
 
     Raises RuntimeError if the plugin is not registered.
     """
@@ -57,7 +57,8 @@ def apply_plugin(name: str) -> None:
         current = None
 
     _APPLIED_STACK.append((_ACTIVE_PLUGIN, current))
-    config = factory()
+    config_dict = factory()
+    config = Config(**config_dict)
     set_config(config)
     _ACTIVE_PLUGIN = name
 

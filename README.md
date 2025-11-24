@@ -1,49 +1,12 @@
 # bioml_utils — utilities for bioinformatic language models
 
-## Quick start — exact copy/paste (Poetry, local dev)
-
-These are the minimal commands a new developer can copy/paste to get a working local development environment for both the framework and a plugin (e.g., Saluki).
-
-IMPORTANT: Saluki in the examples is only an example plugin. The framework is plugin-agnostic — plugins live in their own repositories and register a small factory that the framework discovers at runtime. Treat `rna_saluki_cnn` / Saluki as an example you can learn from or copy for your own plugins.
-
-We recommend a single shared development environment (single-env) where the framework and plugin are installed into the same Python environment. This avoids confusion, makes imports and entry-point discovery behave deterministically, and is the simplest, most reliable workflow for new developers.
-
-```bash
-# 1) Create the framework venv and install dependencies
-cd /path/to/biolm_utils
-poetry env use $(which python)  # optional: choose interpreter
-poetry install # installs dependency libraries required to run the biolm_utils package (e.g., torch, transformers, hydra)
-
-cd /path/to/biolm_utils
-poetry env use $(which python)   # optional: choose the interpreter you want in the venv
-poetry install                  # create the venv and install framework runtime dependencies
-
-# Now install BOTH framework and plugin into that same environment (single-env, recommended):
-# 1) find the Python executable inside the venv
-VENV_PYTHON=$(poetry env info -p)/bin/python
-# 2) install the framework and the plugin (editable development installs)
-$VENV_PYTHON -m pip install -e /path/to/biolm_utils
-$VENV_PYTHON -m pip install -e /path/to/rna_saluki_cnn/saluki_plugin
-
-# 3) Run the quick demo (smoke test) inside the same environment
-poetry run python examples/quick_train_saluki.py
-
-# Convenience helper: if you prefer a one-liner that builds a plugin venv and installs
-# the framework into it, see the plugin repo Makefile (`make bootstrap FRAMEWORK_PATH=/path/to/biolm_utils`).
-# But the canonical approach documented here is the single-env workflow above.
-
-# 3) Run the plugin quick demo (smoke test):
-# Run the demo using the same environment that has both framework + plugin installed.
-poetry run python examples/quick_train_saluki.py
-
-# OR (convenience helper):
-# make bootstrap FRAMEWORK_PATH=/path/to/biolm_utils
-```
-
-Note: the framework and plugin must be installed into the same Python environment (the same Poetry venv). If you see import/discovery issues, ensure both installs ran in the same venv or use `PYTHONPATH` to point at local checkouts temporarily.
-
+## Overview
 
 A compact toolkit for tokenizing, pre-training and fine-tuning language models on biological sequences (RNA/protein). It also supports interpretation with leave-one-out (LOO) scores.
+
+**Plugin Architecture**: The framework uses a configuration-first plugin system for extensibility. Plugins provide config schemas (dicts) that specify custom models, datasets, and tokenizers. Plugins are discovered via Python entry-points or local directories, allowing seamless integration without modifying core code.
+
+Base classes (`BaseModel`, `BaseDataset`) ensure consistency and provide hooks for customization.
 
 ## Quick start (Poetry)
 
@@ -78,16 +41,25 @@ poetry lock
 Top-level package: `biolm_utils/` — main modules include:
 - `biolm.py`     : CLI entrypoint for tokenize / pre-train / fine-tune / interpret / predict
 - `config.py`    : Config dataclass and compatibility helpers
+- `base_model.py`: Base classes for plugin models
+- `base_dataset.py`: Base classes for plugin datasets
+- `plugin_registry.py`: Registry for plugin discovery and application
+- `plugin_loader.py`: Automatic plugin discovery via entry-points and directories
 - `cross_validation.py` : New CrossValidator orchestration (replaces decorator-based CV)
 - `params.py` / `entry.py` : CLI parsing and runtime wiring
 - `train_tokenizer.py`, `trainer.py`, `interpret.py`, `loo_utils.py` : core functionality
 
 See the `biolm_utils/` package for full details.
 
+## Plugin Development
 
-## Docs
+Plugins extend the framework with custom models/datasets. Create a separate repo with:
 
-See DOCS/ for a short guide on framework internals and a plugin example (Saluki).
+1. A factory function returning a config dict (e.g., `get_my_plugin_config()`).
+2. Entry-point in `pyproject.toml`: `[project.entry-points."biolm_utils.plugins"] myplugin = "myplugin:get_my_plugin_config"`
+3. Subclass `BaseModel` and `BaseDataset` for consistency.
+
+For local development, place plugins in a `plugins/` directory discoverable by the framework.
 
 ## Quick workflow — using plugins (short)
 
