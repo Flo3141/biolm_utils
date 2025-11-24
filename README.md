@@ -6,7 +6,7 @@ These are the minimal commands a new developer can copy/paste to get a working l
 
 IMPORTANT: Saluki in the examples is only an example plugin. The framework is plugin-agnostic — plugins live in their own repositories and register a small factory that the framework discovers at runtime. Treat `rna_saluki_cnn` / Saluki as an example you can learn from or copy for your own plugins.
 
-The instructions below show two different workflows you can use depending on whether you prefer a single shared environment for framework+plugin development (recommended) or separate environments (useful when you want to run framework CLI separately).
+We recommend a single shared development environment (single-env) where the framework and plugin are installed into the same Python environment. This avoids confusion, makes imports and entry-point discovery behave deterministically, and is the simplest, most reliable workflow for new developers.
 
 ```bash
 # 1) Create the framework venv and install dependencies
@@ -14,34 +14,23 @@ cd /path/to/biolm_utils
 poetry env use $(which python)  # optional: choose interpreter
 poetry install # installs dependency libraries required to run the biolm_utils package (e.g., torch, transformers, hydra)
 
-# Two supported development workflows (choose one):
-
-## Option A — Recommended: single environment (easy to reason about)
-## - Create one shared environment (Poetry venv created inside the framework repo), then install both framework and plugin into that same environment.
-## - Advantages: exact runtime matches, no surprises from mismatched environments; easiest for debugging.
-
 cd /path/to/biolm_utils
-poetry env use $(which python)
-poetry install                 # create the venv + install required deps for the framework
+poetry env use $(which python)   # optional: choose the interpreter you want in the venv
+poetry install                  # create the venv and install framework runtime dependencies
 
-# Reuse the exact same interpreter/venv for the plugin so framework + plugin live in the same environment.
-# You can either point the plugin repo to the same Python binary from the framework venv, or install the plugin into the framework venv directly:
-# 1) find the venv interpreter created by Poetry: `poetry env info -p` gives the venv path
-# 2) install both framework and plugin into that same interpreter:
-
-# Example: install framework & plugin into the same venv (single-env)
+# Now install BOTH framework and plugin into that same environment (single-env, recommended):
+# 1) find the Python executable inside the venv
 VENV_PYTHON=$(poetry env info -p)/bin/python
+# 2) install the framework and the plugin (editable development installs)
 $VENV_PYTHON -m pip install -e /path/to/biolm_utils
 $VENV_PYTHON -m pip install -e /path/to/rna_saluki_cnn/saluki_plugin
 
-## Option B — Separate envs (plugin dev venv — what the Makefile does)
-## - Create a separate Poetry venv for the plugin; install the framework into that plugin venv so tests/examples run in the plugin's environment.
-cd /path/to/rna_saluki_cnn
-# Use --no-root to avoid installing the plugin repo as a top-level package by Poetry itself
-poetry install --no-root
-# Inside the plugin venv, install the framework so the plugin can import and run against it
-poetry run python -m pip install -e /path/to/biolm_utils
-poetry run python -m pip install -e ./saluki_plugin
+# 3) Run the quick demo (smoke test) inside the same environment
+poetry run python examples/quick_train_saluki.py
+
+# Convenience helper: if you prefer a one-liner that builds a plugin venv and installs
+# the framework into it, see the plugin repo Makefile (`make bootstrap FRAMEWORK_PATH=/path/to/biolm_utils`).
+# But the canonical approach documented here is the single-env workflow above.
 
 # 3) Run the plugin quick demo (smoke test):
 # Run the demo using the same environment that has both framework + plugin installed.
