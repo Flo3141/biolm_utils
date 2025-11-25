@@ -435,21 +435,15 @@ def parametrized_decorator(params, dataset):
         )
 
         def wrapper(*args, **kwargs):
-            # Base paths are taken from biolm_utils.entry at import time by caller
-            # The caller can still expect the old signature: func(train, val, test, model_load, model_save, report, rank)
-            from biolm_utils.entry import (
-                MODELLOADPATH,
-                MODELSAVEPATH,
-                RANKFILE,
-                REPORTFILE,
-            )
+            from .path_setup import PathsManager
 
+            paths = PathsManager.get_paths()
             base_paths = Paths(
-                model_load_path=MODELLOADPATH,
-                model_save_path=MODELSAVEPATH,
-                output_path=MODELSAVEPATH.parent,
-                report_file=REPORTFILE,
-                rank_file=RANKFILE,
+                model_load_path=paths["MODELLOADPATH"],
+                model_save_path=paths["MODELSAVEPATH"],
+                output_path=paths["MODELSAVEPATH"].parent,
+                report_file=paths["REPORTFILE"],
+                rank_file=paths["RANKFILE"],
             )
             cv = CrossValidator(params, dataset, func, base_paths)
             return cv.execute()

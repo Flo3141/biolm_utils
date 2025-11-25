@@ -117,7 +117,8 @@ def get_tokenizer(args, tokenizer_file, tokenizer_cls, pretraining_required):
             eos_token = tok_config["eos_token"]
             bos_token = tok_config["bos_token"]
         logger.info(
-            f"Loaded tokenizer config from {tokenizer_file.parent / 'tokenizer_config.json'} and setting it to {model_max_len} model max length"
+            f"Loaded tokenizer config from {tokenizer_file.parent / 'tokenizer_config.json'} "
+            f"and setting it to {model_max_len} model max length"
         )
         with open(tokenizer_file, "r") as f:
             tokenizer_json = json.load(f)
@@ -249,6 +250,24 @@ def get_trainer(
     compute_metrics,
     labels,
 ):
+
+    # Set Tensorboard logging_dir if available
+    logging_dir = None
+    if hasattr(args, "outputpath") and args.outputpath is not None:
+        logging_dir = str(args.outputpath)
+    elif (
+        hasattr(args, "settings")
+        and getattr(args.settings, "outputpath", None) is not None
+    ):
+        logging_dir = str(args.settings.outputpath)
+    # If not found, fallback to training_args.output_dir
+    if logging_dir is None and hasattr(training_args, "output_dir"):
+        logging_dir = training_args.output_dir
+
+    # Patch training_args to set logging_dir for Tensorboard
+    if hasattr(training_args, "logging_dir"):
+        training_args.logging_dir = logging_dir
+
     if args.mode == "pre-train":
         trainer = trainer_cls(
             model=model,
@@ -260,7 +279,6 @@ def get_trainer(
             # labels=None,
         )
     elif args.task == "regression":
-        # else:  # fine-tuning tasks
         trainer = trainer_cls(
             model=model,
             tokenizer=tokenizer,
@@ -416,7 +434,8 @@ def get_model_and_config(
             use_safetensors=False,
         )
         logger.info(
-            f"Loaded {model_cls} model with weights from {model_load_path} saved on {datetime.fromtimestamp(model_load_path.stat().st_ctime)} with {n_epochs} epochs trained."
+            f"Loaded {model_cls} model with weights from {model_load_path} saved on "
+            f"{datetime.fromtimestamp(model_load_path.stat().st_ctime)} with {n_epochs} epochs trained."
         )
     if args.mode != "pre-train":
         if scaler is not None:

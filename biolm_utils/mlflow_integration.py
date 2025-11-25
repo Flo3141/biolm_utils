@@ -17,8 +17,6 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from biolm_utils.config import get_config
-
 
 class MLflowNotInstalled(Exception):
     pass

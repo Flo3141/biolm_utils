@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from transformers import PreTrainedModel, PretrainedConfig
+from torch.utils.data import Dataset
+from transformers import PretrainedConfig, PreTrainedModel
 
 
 class BaseModel(PreTrainedModel):
@@ -29,18 +30,17 @@ class BaseModel(PreTrainedModel):
         return batch
 
 
-class BaseDataset:
+class BaseDataset(Dataset):
     """Base dataset class for plugins.
 
-    Provides common interface for data loading.
+    Provides common interface for data loading and inherits from PyTorch Dataset.
     """
 
     def __init__(self, **kwargs):
-        pass
+        super().__init__()
 
     def __len__(self):
         raise NotImplementedError
 
     def __getitem__(self, idx):
-        raise NotImplementedError</content>
-<parameter name="filePath">/prj/RNA_NLP/biolm_utils/biolm_utils/base_model.py
+        raise NotImplementedError

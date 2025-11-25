@@ -40,7 +40,9 @@ poetry lock
 
 Top-level package: `biolm_utils/` — main modules include:
 - `biolm.py`     : CLI entrypoint for tokenize / pre-train / fine-tune / interpret / predict
-- `config.py`    : Config dataclass and compatibility helpers
+- `config.py`    : Legacy Config dataclass and compatibility helpers
+- `plugin_config.py`: **NEW** Modern PluginConfig system with comprehensive documentation
+- `plugin_manager.py`: **NEW** PluginManager singleton for config management
 - `base_model.py`: Base classes for plugin models
 - `base_dataset.py`: Base classes for plugin datasets
 - `plugin_registry.py`: Registry for plugin discovery and application
@@ -51,28 +53,112 @@ Top-level package: `biolm_utils/` — main modules include:
 
 See the `biolm_utils/` package for full details.
 
+## Documentation
+
+The framework includes comprehensive documentation in the `DOCS/` directory:
+
+- **`framework_and_saluki_plugin_guide.md`**: High-level overview of concepts, plugin architecture, and the Saluki example plugin
+- **`internal_data_flow_guide.md`**: Detailed technical guide covering CLI parsing, configuration loading, plugin discovery, and the complete execution pipeline
+
+These guides are essential reading for:
+- **Plugin developers**: Understanding how to create and integrate plugins
+- **Framework contributors**: Technical details for extending or modifying the system
+- **Advanced users**: Deep dive into internal workings for debugging and optimization
+
 ## Plugin Development
 
-Plugins extend the framework with custom models/datasets. Create a separate repo with:
+Plugins extend the framework with custom models/datasets using the modern `PluginConfig` system. Create a separate repo with a clean 3-file structure:
 
-1. A factory function returning a config dict (e.g., `get_my_plugin_config()`).
-2. Entry-point in `pyproject.toml`: `[project.entry-points."biolm_utils.plugins"] myplugin = "myplugin:get_my_plugin_config"`
-3. Subclass `BaseModel` and `BaseDataset` for consistency.
+### Plugin Structure (Recommended)
 
-For local development, place plugins in a `plugins/` directory discoverable by the framework.
+```
+my_plugin/
+├── dataset.py      # Dataset implementation (inherit from BaseDataset)
+├── models.py       # Model implementation (inherit from BaseModel)  
+└── config.py       # Plugin configuration factory
+```
+
+### PluginConfig System
+
+The new `PluginConfig` dataclass provides comprehensive documentation and type safety:
+
+```python
+from biolm_utils.plugin_config import PluginConfig, PluginManager
+
+def get_my_plugin_config():
+    """Factory function that creates and returns the plugin configuration."""
+    config = PluginConfig(
+        # Model classes - set your model classes here
+        model_cls_for_pretraining=None,  # For self-supervised pretraining
+        model_cls_for_finetuning=MyModel,  # Your main model class
+        
+        # Dataset class - your dataset implementation
+        dataset_cls=MyDataset,
+        
+        # Tokenizer - usually PreTrainedTokenizerFast
+        tokenizer_cls=PreTrainedTokenizerFast,
+        
+        # Data collators - customize for your data preprocessing
+        datacollator_cls_for_pretraining=None,  # For pretraining tasks
+        datacollator_cls_for_finetuning=DefaultDataCollator,  # For supervised tasks
+        
+        # Training settings
+        learning_rate=1e-4,
+        max_grad_norm=1.0,
+        weight_decay=0.0,
+        
+        # And many more options with full documentation...
+    )
+    
+    PluginManager.set_config(config)
+    return config
+```
+
+Each field in `PluginConfig` includes detailed docstrings explaining:
+- What the field does
+- When to use it vs leave as default
+- Examples for different model types (RNN-CNN, transformers, etc.)
+
+### Entry Points
+
+Add to your `pyproject.toml`:
+```toml
+[project.entry-points."biolm_utils.plugins"]
+myplugin = "my_plugin.config:get_my_plugin_config"
+```
+
+For local development, plugins are automatically discovered from the `plugins/` directory.
 
 ## Using Plugins
 
 Once a plugin is installed (e.g., `pip install -e /path/to/plugin`), it's automatically discovered via entry-points.
 
+### Activating Plugins
+
 To activate a plugin in your code:
 
 ```python
 from biolm_utils.plugin_registry import apply_plugin
-apply_plugin('saluki')  # Activates Saluki's config
+apply_plugin('saluki')  # Activates Saluki's PluginConfig
 ```
 
-For CLI usage, plugins are applied programmatically. See the plugin's README for examples.
+Or use the new PluginManager directly:
+
+```python
+from my_plugin.config import get_my_plugin_config
+config = get_my_plugin_config()  # Automatically sets as active config
+```
+
+### PluginConfig vs Legacy Config
+
+The framework now uses `PluginConfig` (dataclass with comprehensive docs) instead of plain dicts. Benefits:
+
+- **Type Safety**: Full type hints and validation
+- **Documentation**: Every field has detailed explanations  
+- **IDE Support**: Auto-completion and inline help
+- **Consistency**: Standardized plugin interface
+
+Legacy dict-based plugins still work via automatic conversion.
 
 ## Quick workflow — using plugins (short)
 

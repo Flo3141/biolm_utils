@@ -10,9 +10,10 @@ warnings.filterwarnings("ignore", message=".*The 'nopython' keyword.*")
 
 import shap
 
-from biolm_utils.config import get_config
 from biolm_utils.loo_utils import TauLOO_Evaluation_For_Regression
 from biolm_utils.train_utils import get_model_and_config
+
+from .config_access import ConfigManager
 
 
 def loo_scores(
@@ -24,7 +25,7 @@ def loo_scores(
     output_path,
     remove_first_last,
 ):
-    config = get_config()
+    config = ConfigManager.get_config()
 
     # Compatibility helpers for structured config (BioLMConfig) and legacy
     # flat top-level attributes (migration compatibility). Most of these options are nested under `inference.looscores` or
@@ -73,12 +74,12 @@ def loo_scores(
     model = get_model_and_config(
         args=args,
         model_cls=model_cls,
-        model_config_cls=config.CONFIG_CLS,
+        model_config_cls=config.config_cls,
         tokenizer=tokenizer,
         dataset=test_dataset,
         nlabels=nlabels,
         model_load_path=model_load_path,
-        pretraining_required=config.PRETRAINING_REQUIRED,
+        pretraining_required=config.pretraining_required,
         scaler=None,
     )
 

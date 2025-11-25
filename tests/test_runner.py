@@ -6,10 +6,11 @@ from biolm_utils.structured_config import BioLMConfig, DebuggingConfig, Training
 
 class DummyConfig:
     # minimal config container used by make_run_fn tests
-    DATACOLLATOR_CLS_FOR_PRETRAINING = lambda tokenizer=None: object()
-    MODEL_CLS_FOR_PRETRAINING = object
-    MODEL_CLS_FOR_FINETUNING = object
-    ADD_SPECIAL_TOKENS = False
+    datacollator_cls_for_pretraining = lambda tokenizer=None: object()
+    datacollator_cls_for_finetuning = lambda tokenizer=None: object()
+    model_cls_for_pretraining = object
+    model_cls_for_finetuning = object
+    add_special_tokens = False
 
 
 def _make_args(mode="predict"):

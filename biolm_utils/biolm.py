@@ -9,20 +9,16 @@ from transformers.data.data_collator import DefaultDataCollator
 from transformers.trainer_callback import TrainerState
 from transformers.training_args import TrainingArguments
 
-from biolm_utils.config import get_config
 from biolm_utils.cross_validation import CrossValidator
-from biolm_utils.entry import (
-    CHECKPOINTPATH,
-    CLASSIFICATIONTRAINER_CLS,
-    DATASETFILE,
-    GRADACC,
-    METRIC,
-    MLMTRAINER_CLS,
-    REGRESSIONTRAINER_CLS,
-    TBPATH,
-    TOKENIZERFILE,
-    args,
-)
+
+from .config_access import ConfigManager
+from .constants import get_constants
+from .path_setup import PathsManager
+from .plugin_config import PluginManager
+
+args = ConfigManager.get_config()
+constants = get_constants()
+paths = PathsManager.get_paths()
 from biolm_utils.interpret import loo_scores
 from biolm_utils.params import get_detected_ngpus
 from biolm_utils.paths import Paths
@@ -66,11 +62,11 @@ def log_gpu_info():
 def _get_trainer_class(mode, task):
     """Determines the appropriate Trainer class based on mode and task."""
     if mode == "pre-train":
-        return MLMTRAINER_CLS
+        return constants["MLMTRAINER_CLS"]
 
     task_to_trainer = {
-        "regression": REGRESSIONTRAINER_CLS,
-        "classification": CLASSIFICATIONTRAINER_CLS,
+        "regression": constants["REGRESSIONTRAINER_CLS"],
+        "classification": constants["CLASSIFICATIONTRAINER_CLS"],
     }
     trainer_cls = task_to_trainer.get(task)
     if trainer_cls is None:
@@ -110,7 +106,7 @@ def _build_training_args(model_save_path, val_dataset, config):
         num_train_epochs=num_epochs,
         per_device_train_batch_size=args.training.batchsize,
         per_device_eval_batch_size=eval_batch_size,
-        gradient_accumulation_steps=GRADACC,
+        gradient_accumulation_steps=constants["GRADACC"],
         save_total_limit=1 if not args.debugging.dev else 0,
         load_best_model_at_end=load_best,
         evaluation_strategy=eval_strategy,
@@ -118,16 +114,14 @@ def _build_training_args(model_save_path, val_dataset, config):
         logging_strategy="steps" if is_pre_train else "epoch",
         disable_tqdm=True,
         log_level="critical" if args.debugging.silent else "info",
-        logging_dir=str(TBPATH),
         warmup_ratio=0.05 if is_pre_train else 0.0,
         remove_unused_columns=False,
         dataloader_drop_last=True,
         label_names=["labels"],
         learning_rate=config.learning_rate,
-        max_grad_norm=config.MAX_GRAD_NORM,
-        weight_decay=config.WEIGHT_DECAY,
+        max_grad_norm=config.max_grad_norm,
+        weight_decay=config.weight_decay,
         save_safetensors=False,
-        report_to=["tensorboard"],
     )
 
 
@@ -180,12 +174,12 @@ def train(
     model = get_model_and_config(
         args=args,
         model_cls=model_cls,
-        model_config_cls=config.CONFIG_CLS,
+        model_config_cls=config.config_cls,
         tokenizer=tokenizer,
         dataset=full_dataset,
         nlabels=num_labels,
         model_load_path=model_load_path,
-        pretraining_required=config.PRETRAINING_REQUIRED,
+        pretraining_required=config.pretraining_required,
         scaler=getattr(train_dataset.dataset, "scaler", None),
     )
 
@@ -195,7 +189,9 @@ def train(
     training_args = _build_training_args(model_save_path, val_dataset, config)
 
     compute_metrics = (
-        None if args.mode == "pre-train" else METRIC(full_dataset, model_save_path)
+        None
+        if args.mode == "pre-train"
+        else constants["METRIC"](full_dataset, model_save_path)
     )
     labels = getattr(full_dataset, "labels", None)
 
@@ -214,8 +210,12 @@ def train(
 
     num_epochs_trained = 0
     if args.training and args.training.resume is True:
-        logging.info(f"Resuming training from checkpoint: {CHECKPOINTPATH}")
-        train_result = trainer.train(resume_from_checkpoint=str(CHECKPOINTPATH))
+        logging.info(
+            f"Resuming training from checkpoint: {constants['CHECKPOINTPATH']}"
+        )
+        train_result = trainer.train(
+            resume_from_checkpoint=str(constants["CHECKPOINTPATH"])
+        )
     else:
         if not isinstance(args.training.resume, bool):
             trainer._load_from_checkpoint(model_save_path)
@@ -284,17 +284,17 @@ def test(
         model = get_model_and_config(
             args=args,
             model_cls=model_cls,
-            model_config_cls=config.CONFIG_CLS,
+            model_config_cls=config.config_cls,
             tokenizer=tokenizer,
             dataset=full_dataset,
             nlabels=num_labels,
             model_load_path=model_load_path,
-            pretraining_required=config.PRETRAINING_REQUIRED,
+            pretraining_required=config.pretraining_required,
             scaler=None,
         )
 
     test_args = _build_test_args(model_load_path, test_dataset)
-    compute_metrics = METRIC(full_dataset, model_load_path)
+    compute_metrics = constants["METRIC"](full_dataset, model_load_path)
     labels = getattr(full_dataset, "labels", None)
 
     evaluator = get_trainer(
@@ -329,7 +329,7 @@ def test(
 
 def main():
     """Main execution entry point."""
-    config = get_config()
+    config = PluginManager.get_config()
 
     if args.mode == "tokenize":
         tokenize(args)
@@ -337,28 +337,25 @@ def main():
 
     # Initialize tokenizer and dataset, making them available for the `run` function.
     tokenizer = get_tokenizer(
-        args, TOKENIZERFILE, config.TOKENIZER_CLS, config.PRETRAINING_REQUIRED
+        args, paths["TOKENIZERFILE"], config.tokenizer_cls, config.pretraining_required
     )
     tokenizer_for_trainer = (
         tokenizer
-        if config.SPECIAL_TOKENIZER_FOR_TRAINER_CLS is None
-        else config.SPECIAL_TOKENIZER_FOR_TRAINER_CLS()
+        if config.special_tokenizer_for_trainer_cls is None
+        else config.special_tokenizer_for_trainer_cls()
     )
     full_dataset = get_dataset(
-        args, tokenizer, config.ADD_SPECIAL_TOKENS, DATASETFILE, config.DATASET_CLS
+        args,
+        tokenizer,
+        config.add_special_tokens,
+        paths["DATASETFILE"],
+        config.dataset_cls,
     )
 
     # Build a run-once function and hand orchestration to the CrossValidator
     # NOTE: we intentionally keep the per-fold function signature identical to
     # the previous nested `run` function so the CrossValidator may invoke it
     # without further changes.
-    from biolm_utils.entry import (
-        MODELLOADPATH,
-        MODELSAVEPATH,
-        OUTPUTPATH,
-        RANKFILE,
-        REPORTFILE,
-    )
 
     run_once = make_run_fn(
         args=args,

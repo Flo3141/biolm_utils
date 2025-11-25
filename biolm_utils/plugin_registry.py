@@ -57,8 +57,15 @@ def apply_plugin(name: str) -> None:
         current = None
 
     _APPLIED_STACK.append((_ACTIVE_PLUGIN, current))
-    config_dict = factory()
-    config = Config(**config_dict)
+    config_obj = factory()
+
+    # Handle both dict and dataclass-like objects (e.g., PluginConfig instances)
+    if isinstance(config_obj, dict):
+        config = Config(**config_obj)
+    else:
+        # Assume it's a dataclass-like object with __dict__
+        config = Config(**config_obj.__dict__)
+
     set_config(config)
     _ACTIVE_PLUGIN = name
 

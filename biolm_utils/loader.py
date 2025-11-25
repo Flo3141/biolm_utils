@@ -95,10 +95,8 @@ def _process_hydra_config(cfg: DictConfig) -> BioLMConfig:
 
     # Apply plugin if specified
     if biolm_cfg.plugin:
-        from .plugin_loader import discover_entrypoint_plugins
-        from .plugin_registry import apply_plugin
-        discover_entrypoint_plugins()  # Ensure plugins are discovered
-        apply_plugin(biolm_cfg.plugin)
+        # Plugin system removed - plugins should be handled differently
+        pass
 
     return biolm_cfg
 

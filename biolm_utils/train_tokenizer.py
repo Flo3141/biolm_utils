@@ -1,3 +1,4 @@
+import logging
 import random
 import tempfile
 from pathlib import Path
@@ -9,13 +10,15 @@ from tokenizers.normalizers import Sequence as Normseq
 from tokenizers.pre_tokenizers import Sequence, Split, WhitespaceSplit
 from tokenizers.processors import BertProcessing
 
-from biolm_utils.entry import TOKENIZERFILE, logging
 from biolm_utils.rna_datasets import RNABaseDataset
+
+from .path_setup import PathsManager
 
 # UNIREFSIZE = 152_670_237
 
 
 def tokenize(args):
+    paths = PathsManager.get_paths()
     file_path = Path(
         getattr(args.data_source, "filepath", getattr(args, "filepath", ""))
     )
@@ -176,8 +179,8 @@ def tokenize(args):
         cls=("[CLS]", tokenizer.token_to_id("[CLS]")),
     )
 
-    tokenizer.name_or_path = TOKENIZERFILE
+    tokenizer.name_or_path = paths["TOKENIZERFILE"]
 
     # Save the tokenizer.
-    logging.info(f"Saving tokenizer to {TOKENIZERFILE}")
-    tokenizer.save(str(TOKENIZERFILE))
+    logging.info(f"Saving tokenizer to {paths['TOKENIZERFILE']}")
+    tokenizer.save(str(paths["TOKENIZERFILE"]))

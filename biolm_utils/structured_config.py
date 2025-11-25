@@ -2,9 +2,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, cast
 
-from hydra.core.config_store import ConfigStore
-from omegaconf import MISSING
-
 
 @dataclass
 class DataSourceConfig:
@@ -81,24 +78,15 @@ class DebuggingConfig:
 class BioLMConfig:
     # Core settings
     mode: str = "fine-tune"
-    task: str = "regression"
-    plugin: Optional[str] = None  # New: plugin to apply (e.g., 'saluki')
-    mode: str = "tokenize"
-    outputpath: Optional[Path] = None
     task: Optional[str] = None
+    plugin: Optional[str] = None
+    outputpath: Optional[Path] = None
     data_source: Optional[DataSourceConfig] = None
     tokenization: Optional[TokenizationConfig] = None
     training: Optional[TrainingConfig] = None
     inference: Optional[InferenceConfig] = None
     settings: Optional[SettingsConfig] = None
     debugging: DebuggingConfig = field(default_factory=DebuggingConfig)
-
-    # NOTE: The legacy `to_namespace()` helper that produced a flattened
-    # argparse.Namespace for backward compatibility has been removed. The
-    # project now requires code to operate on the structured `BioLMConfig`
-    # dataclass directly — use cfg.data_source, cfg.training and cfg.debugging
-    # fields instead. This is an intentional breaking change to simplify the
-    # codebase and remove duplication.
 
     def validate(self) -> None:
         """Validate the configuration.
@@ -118,17 +106,11 @@ class BioLMConfig:
         if self.mode in ["tokenize", "predict", "interpret"]:
             return
 
-        # data_source must exist for training modes. Preserve previous behaviour
-        # (warn and return) — tests and callers rely on being permissive here.
+        # data_source must exist for training modes.
         if not self.data_source:
-            # Emit a warning via the logging module instead of raising to keep
-            # the same behaviour as the previous implementation.
-            import logging
-
-            logging.getLogger(__name__).warning(
+            raise ValueError(
                 f"No data_source specified for mode '{self.mode}'. This may cause issues during training."
             )
-            return
 
         ds = self.data_source
 
@@ -197,21 +179,13 @@ class BioLMConfig:
                             f"With data_source.crossvalidation=True, {split_name} must contain only integers"
                         )
 
-        # Disallow legacy GPU count in settings.environment
-        if self.settings and isinstance(self.settings.environment, dict):
-            if "ngpus" in self.settings.environment:
-                raise ValueError(
-                    "The 'settings.environment.detected_ngpus' option has been removed. "
-                    "GPU count is auto-detected; use debugging.detected_ngpus."
-                )
-
     def autodetect_gpus(self) -> None:
         """Detect or normalise GPU settings and write result to debugging.detected_ngpus.
 
-        This is intentionally a runtime convenience; detection uses PyTorch if
-        available (tests monkeypatch 'torch' into sys.modules). The method is
-        permissive: any failure results in falling back to CPU with detected_ngpus=1.
+        Logs a warning if GPU is requested but not available or detection fails.
         """
+        import logging
+
         final_ngpus = None
         if getattr(self.debugging, "accelerator", "gpu") == "gpu":
             try:
@@ -230,17 +204,15 @@ class BioLMConfig:
                         final_ngpus = detected_gpus
                     else:
                         final_ngpus = _highest_power_of_two_leq(detected_gpus)
-                    # keep accelerator as gpu if detected; otherwise we will fallback
-                    # in the else clause
                 else:
-                    # no GPUs available -> fallback
+                    logging.warning(
+                        "GPU requested but no GPUs detected. Falling back to CPU."
+                    )
                     self.debugging.accelerator = "cpu"
-            except Exception:
-                # Any import/initialization error -> fallback to CPU
+            except Exception as e:
+                logging.warning(
+                    f"GPU requested but detection failed ({e}). Falling back to CPU."
+                )
                 self.debugging.accelerator = "cpu"
-
         # attach the computed value
         self.debugging.detected_ngpus = final_ngpus if final_ngpus is not None else 1
-
-
-# ConfigStore registration removed for simplicity

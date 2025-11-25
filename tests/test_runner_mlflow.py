@@ -27,12 +27,13 @@ def test_runner_uses_mlflow_for_results(monkeypatch, tmp_path):
 
     # Minimal config with expected attributes
     class CfgObj:
-        MODEL_CLS_FOR_PRETRAINING = None
-        MODEL_CLS_FOR_FINETUNING = object
-        DATACOLLATOR_CLS_FOR_PRETRAINING = staticmethod(lambda **kw: None)
-        ADD_SPECIAL_TOKENS = False
-        CONFIG_CLS = None
-        PRETRAINING_REQUIRED = False
+        model_cls_for_pretraining = None
+        model_cls_for_finetuning = object
+        datacollator_cls_for_pretraining = staticmethod(lambda **kw: None)
+        datacollator_cls_for_finetuning = staticmethod(lambda **kw: None)
+        add_special_tokens = False
+        config_cls = None
+        pretraining_required = False
 
     cfg = CfgObj()
 
