@@ -4,28 +4,127 @@
 
 A compact toolkit for tokenizing, pre-training and fine-tuning language models on biological sequences (RNA/protein). It also supports interpretation with leave-one-out (LOO) scores.
 
-**Plugin Architecture**: The framework uses a configuration-first plugin system for extensibility. Plugins provide config schemas (dicts) that specify custom models, datasets, and tokenizers. Plugins are discovered via Python entry-points or local directories, allowing seamless integration without modifying core code.
+**Plugin Architecture**: The framework uses a configuration-first plugin system for extensibility. Plugins are included as git submodules in the `plugins/` directory and managed via Poetry with relative paths. Plugins provide config schemas (dicts) that specify custom models, datasets, and tokenizers.
 
 Base classes (`BaseModel`, `BaseDataset`) ensure consistency and provide hooks for customization.
 
-## Quick start (Poetry)
+## Quick Start: One Command Setup
 
-This repo uses Poetry for reproducible installs. From the project root:
+The fastest way to get started with BioLM and all plugins:
+
+### Prerequisites
+- Python 3.10+
+- Poetry (install from [python-poetry.org](https://python-poetry.org/))
+- Git
+
+### Installation (Two Commands!)
 
 ```bash
-# optional: choose a Python interpreter
-poetry env use $(which python)
+# 1. Clone the framework with all plugins
+git clone --recurse-submodules https://github.com/dieterich-lab/biolm_utils.git
+cd biolm_utils
+
+# 2. Run the setup script
+./setup.sh
+```
+
+Done! Everything is configured and ready to use.
+
+### Run Your First Experiment
+
+```bash
+# Start with a minimal example
+poetry run biolm fine-tune --config-path ./exampleconfigs/minimal
+
+# Or try Saluki-specific (RNA analysis)
+poetry run biolm fine-tune --config-path ./exampleconfigs/saluki-rna-finetuning
+
+# Or try XLNet-specific (Protein analysis)
+poetry run biolm fine-tune --config-path ./exampleconfigs/xlnet-protein-finetuning
+```
+
+For help: `poetry run biolm --help`
+
+## Configuration & Documentation
+
+**New to BioLM?** Start here:
+
+- **[README_CONFIGS.md](./README_CONFIGS.md)** — Complete configuration guide with parameter reference
+- **[PLUGIN_TEMPLATE/](./PLUGIN_TEMPLATE/)** — Copy-paste template for your experiments
+- **[exampleconfigs/](./exampleconfigs/)** — Working examples (minimal, Saluki-specific, XLNet-specific)
+
+Key things to know:
+
+- Each plugin has fixed blocksize: Saluki=12288, XLNet=512 (don't override!)
+- Saluki requires comma-separated nucleotides (e.g., `a,t,g,c,a,g,t,c`)
+- XLNet works with raw sequences (e.g., `MKVLWAALLVT...` or `atgcgatc...`)
+- Column positions in data files are **1-indexed** (start from 1, not 0!)
+
+### Available Plugins
+
+Plugins are located in the `plugins/` directory:
+
+- **Saluki**: RNA sequence analysis with CNN-based models (`./plugins/saluki`)
+- **XLNet**: Protein/RNA sequence analysis with Transformer models (`./plugins/xlnet`)
+
+## Manual Setup (Advanced Users / Development)
+
+If you prefer manual control or are developing the framework/plugins:
+
+```bash
+# Clone with submodules (if not using --recurse-submodules initially)
+git submodule update --init --recursive
+
+# Install dependencies and plugins via Poetry
 poetry install
 
-# run tests
+# Or add MLflow support
+poetry install --with mlflow
+
+# Run tests
 poetry run pytest -q
 ```
 
-To add MLflow extras for experiment tracking:
+### For Plugin Developers
+
+To modify a plugin while the framework is running:
 
 ```bash
-poetry install --with mlflow
+# After making changes to a plugin (e.g., ./plugins/saluki)
+# reinstall the plugin in develop mode
+poetry install
+
+# Your changes are immediately available
+poetry run biolm fine-tune --config-path ...
 ```
+
+## Using MLflow for Experiment Tracking
+
+The framework integrates with MLflow for automatic logging of experiments, metrics, and models. To enable MLflow:
+
+1. Install with MLflow support as shown above.
+2. In your plugin config, set `settings.mlflow.enabled: true`.
+3. Optionally configure `tracking_uri` and `experiment_name` (auto-set based on output path and mode if not specified).
+
+During training, metrics and parameters are logged automatically. To view experiments:
+
+```bash
+# Start the MLflow UI
+poetry run mlflow ui --backend-store-uri /path/to/your/output/mode/mlruns
+
+# Access at http://127.0.0.1:5000 in your browser
+```
+
+For remote servers, use port forwarding: `ssh -N -f -L localhost:5000:localhost:5000 user@server`.
+
+## Plugins
+
+The framework supports plugins for specific models and datasets. Available plugins:
+
+- **Saluki**: CNN-based model for RNA sequence analysis ([rna_saluki_cnn](https://github.com/dieterich-lab/rna_saluki_cnn))
+- **XLNet**: Transformer model for protein/RNA sequences ([rna_protein_xlnet](https://github.com/dieterich-lab/rna_protein_xlnet))
+
+Use the installer script to add plugins automatically.
 
 ## Pipfile → Poetry
 
@@ -232,7 +331,6 @@ training:
   general:
     batchsize: 8
     gradacc: 4
-    blocksize: 512
     nepochs: 10
     patience: 3
     resume: False # for resuming training
@@ -241,8 +339,6 @@ training:
     scaling: log # [log, minmax, standard]
     weightedregression: False
 ```
-
-The attributes under `training: general` should be mostly self-explanatory: `blocksize` referes to the sequence length and might lead to errors when chosen bigger than `512` (for XLNET). For Saluki, we were able to set this maximum sequence length to `12288`. Sequences will then be truncated by the tokenizer or will be tokenized, re-centered and cropped when using the option `cdscentered` (see down below).
 
 We also have to clarify data pre-processing and environment options:
 
@@ -329,7 +425,7 @@ Programmatic:
 from biolm_utils.params import load_config
 
 # Explicit list of overrides: 'key=value' strings
-cfg = load_config(["mode=tokenize", "debugging.accelerator=cpu"])
+cfg = load_config(["mode=tokenize"])
 print(cfg.mode)  # -> 'tokenize'
 ```
 
@@ -337,7 +433,7 @@ Via CLI (Hydra):
 
 ```bash
 # Use Hydra-style overrides from the shell; Hydra CLI still works as before
-python biolm.py mode=tokenize debugging.accelerator=cpu
+python biolm.py mode=tokenize
 ```
 
 Notes:
@@ -457,3 +553,46 @@ This framwework on it's own does not provide full functionality. It is meant to 
 - A main script that imports the `run()` method from [biolm.py](./biolm_utils/biolm.py) and defines a custom `Config` object from [config.py](./biolm_utils/config.py) via `setconfig()`.
 
 ## License
+
+## Unified Installation: Framework + Plugin
+
+To install both the biolm_utils framework and the Saluki plugin in a single Poetry environment:
+
+```bash
+# 1. Install framework dependencies
+cd /prj/RNA_NLP/biolm_utils
+poetry install
+poetry add mlflow
+
+# 2. Add Saluki plugin as a local dependency (Poetry way)
+poetry add /absolute/path/to/rna_saluki_cnn
+
+# 3. Run your code inside the Poetry environment
+poetry run python your_entrypoint.py --config your_config.yaml
+```
+
+- No manual venv activation needed—`poetry run` ensures the correct environment is used.
+- The plugin must have a valid `pyproject.toml` and all code inside the `saluki_plugin/` directory.
+
+
+## Troubleshooting
+
+- If you encounter build errors, ensure the plugin's `pyproject.toml` includes:
+
+  ```toml
+  [tool.poetry]
+  name = "rna-saluki-cnn"
+  version = "0.1.0"
+  packages = [{ include = "saluki_plugin" }]
+  ...
+  ```
+
+- Remove any `package-mode = false` lines.
+- Only one `pyproject.toml` per package.
+
+
+## Example Usage
+
+```bash
+poetry run python src/entry.py --config exampleconfigs/predict_interpret.yaml
+```
