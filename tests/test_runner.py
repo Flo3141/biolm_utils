@@ -1,7 +1,7 @@
 import pytest
 
-from biolm_utils.runner import make_run_fn
-from biolm_utils.structured_config import BioLMConfig, DebuggingConfig, TrainingConfig
+from biolm.runner import make_run_fn
+from biolm.structured_config import BioLMConfig, DebuggingConfig, TrainingConfig
 
 
 class DummyConfig:
@@ -39,7 +39,7 @@ def test_make_run_fn_tokenize_mode(monkeypatch):
         called["args"] = a
         return "TOK"
 
-    monkeypatch.setattr("biolm_utils.runner.tokenize", fake_tokenize)
+    monkeypatch.setattr("biolm.runner.tokenize", fake_tokenize)
 
     args = _make_args(mode="tokenize")
     run_fn = make_run_fn(args, DummyConfig(), None, None, None)
@@ -50,7 +50,7 @@ def test_make_run_fn_tokenize_mode(monkeypatch):
 
 def test_predict_delegates_to_biolm_test(monkeypatch):
     # Stub the biolm.test function to verify arguments are forwarded
-    mod = __import__("biolm_utils.biolm").biolm
+    mod = __import__("biolm.biolm").biolm
 
     def fake_test(
         test_dataset,
@@ -79,7 +79,7 @@ def test_predict_delegates_to_biolm_test(monkeypatch):
 
 
 def test_fine_tune_triggers_train_and_then_test(monkeypatch):
-    mod = __import__("biolm_utils.biolm").biolm
+    mod = __import__("biolm.biolm").biolm
 
     class ModelLike:
         @staticmethod
@@ -114,7 +114,7 @@ def test_interpret_delegates_to_loo_scores(monkeypatch):
         called.update(kwargs)
         return {"some": "score"}
 
-    monkeypatch.setattr("biolm_utils.runner.loo_scores", fake_loo_scores)
+    monkeypatch.setattr("biolm.runner.loo_scores", fake_loo_scores)
 
     args = _make_args(mode="interpret")
     run_fn = make_run_fn(args, DummyConfig(), None, None, None)

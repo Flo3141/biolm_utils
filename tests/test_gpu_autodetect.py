@@ -3,7 +3,7 @@ import types
 
 import pytest
 
-from biolm_utils.params import get_detected_ngpus, load_config
+from biolm.params import get_detected_ngpus, load_config
 
 
 def _make_dummy_torch(gpu_count: int):

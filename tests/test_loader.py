@@ -1,8 +1,8 @@
 import pytest
 from omegaconf import OmegaConf
 
-from biolm_utils import loader
-from biolm_utils.structured_config import BioLMConfig
+from biolm import loader
+from biolm.structured_config import BioLMConfig
 
 
 def test_process_hydra_config_from_dictconfig():

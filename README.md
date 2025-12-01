@@ -17,7 +17,7 @@ git clone --recurse-submodules https://github.com/dieterich-lab/biolm_utils.git
 cd biolm_utils
 
 # Setup
-./setup.sh
+./setup.sh  # Initializes submodules and installs dependencies
 ```
 
 ### Run Your First Experiment
@@ -34,22 +34,55 @@ poetry run biolm fine-tune --config-path ./my_experiment
 
 ## Documentation
 
-- **[QUICKSTART.md](./QUICKSTART.md)** — Getting started guide
-- **[README_CONFIGS.md](./README_CONFIGS.md)** — Configuration reference
-- **[PLUGIN_TEMPLATE/](./PLUGIN_TEMPLATE/)** — Copy-paste template
+- **[QUICKSTART.md](./QUICKSTART.md)** 
+- **[README_CONFIGS.md](./README_CONFIGS.md)** 
+- **[PLUGIN_TEMPLATE/](./PLUGIN_TEMPLATE/)**
+````
+This is the description of what the code block changes:
+<changeDescription>
+Revised the main framework README to clarify submodule initialization and simplify the quick start guide.
+</changeDescription>
 
-## Plugins
+This is the code block that represents the suggested code change:
+````markdown
+# BioLM Utils
 
-- **Saluki**: CNN-based model for RNA sequences
-- **XLNet**: Transformer model for protein/RNA sequences
+A toolkit for tokenizing, pre-training, and fine-tuning language models on biological sequences (RNA/protein). Supports interpretation with leave-one-out (LOO) scores.
 
-Plugins are included as git submodules.
+## Quick Start
 
-## Usage
+### Prerequisites
+- Python 3.10+
+- Poetry ([python-poetry.org](https://python-poetry.org/))
+- Git
+
+### Installation
 
 ```bash
-poetry run biolm --help
+# Clone with plugins
+git clone --recurse-submodules https://github.com/dieterich-lab/biolm_utils.git
+cd biolm_utils
+
+# Setup
+./setup.sh  # Initializes submodules and installs dependencies
 ```
 
-## License
+### Run Your First Experiment
+
+```bash
+# Start with minimal example
+poetry run biolm fine-tune --config-path ./exampleconfigs/minimal
+
+# Or copy template for your data
+cp -r PLUGIN_TEMPLATE my_experiment
+# Edit my_experiment/config.yaml, then:
+poetry run biolm fine-tune --config-path ./my_experiment
+```
+
+## Documentation
+
+- **[QUICKSTART.md](./QUICKSTART.md)** 
+- **[README_CONFIGS.md](./README_CONFIGS.md)** 
+- **[PLUGIN_TEMPLATE/](./PLUGIN_TEMPLATE/)**
+````
 

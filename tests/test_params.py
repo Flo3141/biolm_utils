@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from biolm_utils.structured_config import BioLMConfig, DataSourceConfig
+from biolm.structured_config import BioLMConfig, DataSourceConfig
 
 
 class TestParams:
@@ -27,7 +27,8 @@ class TestParams:
             cfg.validate()
 
     def test_validate_config_fine_tune_with_task_valid(self):
-        cfg = BioLMConfig(mode="fine-tune", task="regression")
+        data_source = DataSourceConfig(splitratio=[80, 10, 10])
+        cfg = BioLMConfig(mode="fine-tune", task="regression", data_source=data_source)
         # Should not raise
         cfg.validate()
 

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from biolm_utils.biolm import set_seed
+from biolm.biolm import set_seed
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ class TestIntegration:
     def test_tokenize_mode_integration(self, mock_config, temp_output_dir, mocker):
         """Test the tokenize mode with mocked components."""
         # Mock the tokenize function
-        mock_tokenize = mocker.patch("biolm_utils.train_tokenizer.tokenize")
+        mock_tokenize = mocker.patch("biolm.train_tokenizer.tokenize")
         mock_tokenize.return_value = None
 
         # Mock args
@@ -77,7 +77,7 @@ class TestIntegration:
         mock_args.debugging.silent = True
 
         # Test that tokenize can be called with mocks
-        from biolm_utils.train_tokenizer import tokenize
+        from biolm.train_tokenizer import tokenize
 
         tokenize(
             mock_args,
@@ -96,12 +96,12 @@ class TestIntegration:
         mock_tokenizer = MagicMock()
         mock_trainer = MagicMock()
 
-        mocker.patch("biolm_utils.train_utils.get_dataset", return_value=mock_dataset)
+        mocker.patch("biolm.train_utils.get_dataset", return_value=mock_dataset)
         mocker.patch(
-            "biolm_utils.train_utils.get_model_and_config",
+            "biolm.train_utils.get_model_and_config",
             return_value=(mock_model, mock_tokenizer),
         )
-        mocker.patch("biolm_utils.train_utils.get_trainer", return_value=mock_trainer)
+        mocker.patch("biolm.train_utils.get_trainer", return_value=mock_trainer)
 
         # Mock args
         mock_args = MagicMock()
@@ -130,15 +130,9 @@ class TestIntegration:
             "OUTPUTPATH": temp_output_dir,
             "LOGFILE": temp_output_dir / "logs" / "log.txt",
         }
-        with patch(
-            "biolm_utils.path_setup.PathsManager.get_paths", return_value=mock_paths
-        ):
+        with patch("biolm.path_setup.PathsManager.get_paths", return_value=mock_paths):
             # Test the individual functions with correct arguments
-            from biolm_utils.train_utils import (
-                get_dataset,
-                get_model_and_config,
-                get_trainer,
-            )
+            from biolm.train_utils import get_dataset, get_model_and_config, get_trainer
 
             # Mock tokenizer
             mock_tok = MagicMock()
@@ -160,11 +154,7 @@ class TestIntegration:
 
             # Verify that the mocked functions were called
             # This ensures the framework attempts to create the components
-            from biolm_utils.train_utils import (
-                get_dataset,
-                get_model_and_config,
-                get_trainer,
-            )
+            from biolm.train_utils import get_dataset, get_model_and_config, get_trainer
 
             # Since they are patched, we can't check calls directly, but the fact that they return the mocks shows they were called
             # Verify that the components are properly integrated
@@ -179,12 +169,12 @@ class TestIntegration:
         mock_tokenizer = MagicMock()
         mock_trainer = MagicMock()
 
-        mocker.patch("biolm_utils.train_utils.get_dataset", return_value=mock_dataset)
+        mocker.patch("biolm.train_utils.get_dataset", return_value=mock_dataset)
         mocker.patch(
-            "biolm_utils.train_utils.get_model_and_config",
+            "biolm.train_utils.get_model_and_config",
             return_value=(mock_model, mock_tokenizer),
         )
-        mocker.patch("biolm_utils.train_utils.get_trainer", return_value=mock_trainer)
+        mocker.patch("biolm.train_utils.get_trainer", return_value=mock_trainer)
 
         mock_args = MagicMock()
         mock_args.mode = "predict"
@@ -211,14 +201,8 @@ class TestIntegration:
             "OUTPUTPATH": temp_output_dir,
             "LOGFILE": temp_output_dir / "logs" / "log.txt",
         }
-        with patch(
-            "biolm_utils.path_setup.PathsManager.get_paths", return_value=mock_paths
-        ):
-            from biolm_utils.train_utils import (
-                get_dataset,
-                get_model_and_config,
-                get_trainer,
-            )
+        with patch("biolm.path_setup.PathsManager.get_paths", return_value=mock_paths):
+            from biolm.train_utils import get_dataset, get_model_and_config, get_trainer
 
             mock_tok = MagicMock()
             dataset = get_dataset(
@@ -244,12 +228,12 @@ class TestIntegration:
         mock_tokenizer = MagicMock()
         mock_trainer = MagicMock()
 
-        mocker.patch("biolm_utils.train_utils.get_dataset", return_value=mock_dataset)
+        mocker.patch("biolm.train_utils.get_dataset", return_value=mock_dataset)
         mocker.patch(
-            "biolm_utils.train_utils.get_model_and_config",
+            "biolm.train_utils.get_model_and_config",
             return_value=(mock_model, mock_tokenizer),
         )
-        mocker.patch("biolm_utils.train_utils.get_trainer", return_value=mock_trainer)
+        mocker.patch("biolm.train_utils.get_trainer", return_value=mock_trainer)
 
         mock_args = MagicMock()
         mock_args.mode = "interpret"
@@ -276,14 +260,8 @@ class TestIntegration:
             "OUTPUTPATH": temp_output_dir,
             "LOGFILE": temp_output_dir / "logs" / "log.txt",
         }
-        with patch(
-            "biolm_utils.path_setup.PathsManager.get_paths", return_value=mock_paths
-        ):
-            from biolm_utils.train_utils import (
-                get_dataset,
-                get_model_and_config,
-                get_trainer,
-            )
+        with patch("biolm.path_setup.PathsManager.get_paths", return_value=mock_paths):
+            from biolm.train_utils import get_dataset, get_model_and_config, get_trainer
 
             mock_tok = MagicMock()
             dataset = get_dataset(

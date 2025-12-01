@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  biolm:
+    build: .
+    volumes:
+      - ./configs:/configs
+      - ./output:/output
+    command: biolm fine-tune --config-path /configs/your_experiment
+    environment:
+      - CUDA_VISIBLE_DEVICES=0  # For GPU support

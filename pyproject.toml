@@ -1,5 +1,40 @@
+[project]
+name = "biolm"
+version = "0.0.3"
+description = "Utilities and orchestration helpers for training and interpreting biolanguage models"
+authors = [{name = "dieterich-lab", email = "noreply@example.com"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "accelerate",
+    "ferret-xai==0.4.0",
+    "hydra-core>=1.3.0",
+    "omegaconf>=2.3.0",
+    "pandas==2.2.2",
+    "tensorboard==2.17.0",
+    "torch==2.3.1",
+    "torchaudio==2.3.1",
+    "torchvision==0.18.1",
+    "transformers==4.57.3",
+    "mlflow>=3.6.0",
+]
+
+[project.optional-dependencies]
+mlflow = ["mlflow>=2.0.0"]
+
+[project.urls]
+repository = "https://github.com/dieterich-lab/biolm_utils"
+
+[project.scripts]
+biolm = "biolm.cli:parse_args"
+
+[project.entry-points."biolm.plugins"]
+# Plugins registered here
+
 [tool.poetry]
-name = "biolm_utils"
+# Legacy section for Poetry compatibility
+name = "biolm"
 version = "0.0.3"
 description = "Utilities and orchestration helpers for training and interpreting biolanguage models"
 authors = ["dieterich-lab <noreply@example.com>"]
@@ -8,7 +43,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
-accelerate = "0.31.0"
+accelerate = "*"
 ferret-xai = "0.4.0"
 hydra-core = ">=1.3.0"
 omegaconf = ">=2.3.0"
@@ -17,7 +52,10 @@ tensorboard = "2.17.0"
 torch = "2.3.1"
 torchaudio = "2.3.1"
 torchvision = "0.18.1"
-transformers = "4.41.2"
+transformers = "4.57.3"
+mlflow = "^3.6.0"
+rna-saluki-cnn = {path = "./plugins/saluki", develop = true}
+rna-protein-xlnet = {path = "./plugins/xlnet", develop = true}
 
 [tool.poetry.group.dev]
 optional = false
@@ -39,6 +77,12 @@ mlflow = ["mlflow"]
 
 [tool.poetry.urls]
 repository = "https://github.com/dieterich-lab/biolm_utils"
+
+[tool.poetry.scripts]
+biolm = "biolm.cli:parse_args"
+
+[tool.poetry.plugins."biolm.plugins"]
+saluki = "saluki_plugin.config:get_saluki_config"
 
 [tool.pyright]
 typeCheckingMode = "off"

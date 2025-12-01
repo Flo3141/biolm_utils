@@ -1,11 +1,22 @@
 import os
 import random
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 import torch
 
-from biolm_utils.biolm import set_seed
+# Mock config before importing
+with patch("biolm.config_access.ConfigManager.get_config") as mock_get_config:
+    from biolm.structured_config import BioLMConfig, TrainingConfig
+
+    mock_cfg = BioLMConfig(
+        mode="tokenize",
+        task="regression",
+        training=TrainingConfig(resume=False),  # Add training config
+    )
+    mock_get_config.return_value = mock_cfg
+    from biolm.biolm import set_seed
 
 
 class TestBiolm:

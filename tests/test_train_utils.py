@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import torch
 
-from biolm_utils.train_utils import (
+from biolm.train_utils import (
     IdentityScaler,
     LogScaler,
     compute_metrics_for_classification,

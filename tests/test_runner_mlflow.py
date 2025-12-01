@@ -1,7 +1,7 @@
 import builtins
 from pathlib import Path
 
-from biolm_utils.structured_config import BioLMConfig, SettingsConfig
+from biolm.structured_config import BioLMConfig, SettingsConfig
 
 
 def test_runner_uses_mlflow_for_results(monkeypatch, tmp_path):
@@ -18,7 +18,7 @@ def test_runner_uses_mlflow_for_results(monkeypatch, tmp_path):
     def fake_start(*args, **kwargs):
         yield FakeML()
 
-    monkeypatch.setattr("biolm_utils.mlflow_integration.start_mlflow_run", fake_start)
+    monkeypatch.setattr("biolm.mlflow_integration.start_mlflow_run", fake_start)
 
     # Build fake args/config
     args = BioLMConfig(
@@ -37,7 +37,7 @@ def test_runner_uses_mlflow_for_results(monkeypatch, tmp_path):
 
     cfg = CfgObj()
 
-    import biolm_utils.runner as runner
+    import biolm.runner as runner
 
     # Ensure runner uses our fake start_mlflow_run (it has an imported reference)
     monkeypatch.setattr(runner, "start_mlflow_run", fake_start)

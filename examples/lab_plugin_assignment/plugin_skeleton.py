@@ -1,4 +1,4 @@
-from biolm_utils.config import Config
+from biolm.config import Config
 
 
 def get_lab_plugin_config() -> Config:

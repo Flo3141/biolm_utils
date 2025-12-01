@@ -1,0 +1,20 @@
+# @package _global_
+
+# Pre-train specific settings
+task: pre-train
+training:
+  seed: 42
+  batchsize: 8
+  gradacc: 4
+  nepochs: 100
+  patience: 10
+  resume: false
+  scaling: log
+  weightedregression: false
+settings:
+  mlflow:
+    enabled: false
+    tracking_uri: null
+    experiment_name: null
+    log_artifacts: true
+    run_name_template: null
