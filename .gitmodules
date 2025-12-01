@@ -1,0 +1,6 @@
+[submodule "plugins/saluki"]
+	path = plugins/saluki
+	url = https://github.com/dieterich-lab/rna_saluki_cnn.git
+[submodule "plugins/xlnet"]
+	path = plugins/xlnet
+	url = https://github.com/dieterich-lab/rna_protein_xlnet.git

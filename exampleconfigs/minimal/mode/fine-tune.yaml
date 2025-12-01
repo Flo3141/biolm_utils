@@ -1,0 +1,11 @@
+# Override settings for fine-tuning mode
+# These override values in config.yaml specifically for fine-tuning
+
+training:
+  nepochs: 100                            # Can fine-tune for longer
+  batchsize: 16                           # Usually larger batch for fine-tuning
+  patience: 10
+
+# Optional: Use a pre-trained checkpoint
+# inference:
+#   pretrainedmodel: /path/to/pretrained/model

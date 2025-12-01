@@ -1,0 +1,106 @@
+# Saluki Fine-tuning Example Configuration
+# ==============================================================
+# This example shows how to fine-tune the Saluki model on RNA sequences
+# Saluki is optimized for long RNA sequences (blocksize: 12288)
+#
+# To use:
+#   poetry run biolm fine-tune --config-path ./exampleconfigs/saluki-rna-finetuning
+#
+# Key points:
+# - Saluki requires comma-separated nucleotides: a,t,g,c,a,g,t,c,...
+# - Blocksize is fixed at 12288 (don't change it)
+# - Encoding must be "atomic" (one-hot: a,t,g,c)
+
+mode: fine-tune
+task: regression
+plugin: saluki
+
+# ============================================================
+# RNA Data File (Saluki-specific format)
+# ============================================================
+# Expected format (tab-separated):
+#   seq_id      expression_level    a,t,g,c,a,g,t,c,a,g,t,c,...
+#   rna_001     1.5                 a,t,g,c,a,g,t,c,a,g,t,c,...
+#   rna_002     2.3                 a,t,g,c,a,g,t,c,a,g,t,c,...
+#
+# Important:
+# - Sequences must be comma-separated nucleotides!
+# - If your data uses "ATGC" format, convert first:
+#   awk '{print $1 "\t" $2 "\t" tolower($3) | "sed \"s/./&,/g\" | sed \"s/,$//\""}'
+outputpath: /tmp/saluki_rna_experiment
+
+data_source:
+  filepath: /path/to/your/rna_data.txt
+  stripheader: false
+  columnsep: "\t"                         # Tab-separated columns
+  tokensep: ","                           # Nucleotides are comma-separated
+  idpos: 1                                # Column 1: RNA ID
+  labelpos: 2                             # Column 2: Expression level or other target
+  seqpos: 3                               # Column 3: RNA sequence (a,t,g,c,...)
+  
+  # Split data: 80% training, 15% validation, 5% test
+  splitratio: [80, 15, 5]
+  
+  # Optional: Cross-validation
+  crossvalidation: false                  # Set to true for k-fold CV
+  # If using CV, specify which split is validation/test
+
+# ============================================================
+# Tokenization: Saluki Always Uses Atomic (One-Hot)
+# ============================================================
+# Saluki's encoding is NOT configurable - it uses one-hot encoding:
+# - a → [1, 0, 0, 0]
+# - t → [0, 1, 0, 0]
+# - g → [0, 0, 1, 0]
+# - c → [0, 0, 0, 1]
+#
+# The settings below are for reference (will be overridden by plugin)
+tokenization:
+  encoding: atomic                        # Fixed for Saluki
+  samplesize: null                        # Use all data; set to N for sampling
+  minfreq: 2
+
+# ============================================================
+# Training: Optimized for Saluki
+# ============================================================
+# These settings work well for RNA data with Saluki model
+training:
+  seed: 42                                # Reproducibility
+  blocksize: 12288                        # SALUKI: Fixed! Do NOT change.
+  batchsize: 2                            # Small batches due to long sequences
+  gradacc: 8                              # Gradient accumulation (2*8=16 effective batch)
+  nepochs: 200                            # Longer training for better convergence
+  patience: 20                            # Generous early stopping
+  
+  # Data preprocessing
+  scaling: log                            # Log scale for expression values
+  weightedregression: false               # Weight by target value
+
+# ============================================================
+# MLflow: Track Your Experiments
+# ============================================================
+settings:
+  mlflow:
+    enabled: true
+    experiment_name: saluki-rna-finetuning
+    tracking_uri: null                    # Auto-detect MLflow server
+
+# ============================================================
+# Inference & Advanced
+# ============================================================
+inference:
+  pretrainedmodel: null                   # Set to a checkpoint for transfer learning
+
+debugging:
+  silent: false                           # Show progress
+  dev: false                              # Set to true to test on small dataset
+  accelerator: auto                       # auto/cpu/gpu/tpu
+
+# ============================================================
+# Notes for First-Time Users
+# ============================================================
+# 1. Replace /path/to/your/rna_data.txt with your actual data file
+# 2. Check your data format: head -3 /path/to/your/rna_data.txt
+# 3. Run: poetry run biolm fine-tune --config-path ./exampleconfigs/saluki-rna-finetuning
+# 4. Monitor progress in: outputpath/fine-tune.log
+# 5. View results in: outputpath/fine-tune/ (model weights, metrics, etc.)

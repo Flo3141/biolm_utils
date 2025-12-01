@@ -1,0 +1,113 @@
+# BioLM Template - Copy This Directory and Customize!
+# ==============================================================
+# Quick Start:
+# 1. cp -r PLUGIN_TEMPLATE my_experiment
+# 2. Edit my_experiment/config.yaml (especially the 3 REQUIRED sections)
+# 3. poetry run biolm fine-tune --config-path ./my_experiment
+#
+# This template works for both Saluki (RNA) and XLNet (Protein/RNA)
+# See README_CONFIGS.md for detailed parameter documentation
+
+# ==============================================================
+# SECTION 1: PLUGIN & TASK (Change these!)
+# ==============================================================
+# Choose one of:
+#   plugin: saluki    (for RNA sequences, blocksize: 12288)
+#   plugin: xlnet     (for proteins or shorter RNA, blocksize: 512)
+mode: fine-tune
+task: regression                          # Or: classification
+plugin: saluki                            # Change to xlnet if using proteins
+
+# ==============================================================
+# SECTION 2: OUTPUT DIRECTORY (REQUIRED - Change this!)
+# ==============================================================
+# This is where your model and results will be saved.
+# Use an ABSOLUTE path (starts with /)
+outputpath: /CHANGE/ME/to/absolute/path
+
+# ==============================================================
+# SECTION 3: YOUR DATA (REQUIRED - Change this!)
+# ==============================================================
+# Point to your data file and describe its structure
+data_source:
+  # Path to your data file (can be relative or absolute)
+  filepath: /CHANGE/ME/to/your/data.txt
+  
+  # Does your file have a header row? (usually false)
+  stripheader: false
+  
+  # How are columns separated?
+  # Common: "\t" (tab), "," (comma), "|" (pipe)
+  columnsep: "\t"
+  
+  # How are tokens separated in sequences?
+  # For Saluki: "," (comma-separated nucleotides)
+  # For XLNet: null (no separation needed)
+  tokensep: ","
+  
+  # Which columns contain ID, sequence, and label?
+  # IMPORTANT: Column numbers are 1-indexed (start from 1, not 0!)
+  #
+  # Your data should look like:
+  #   ID         Label    Sequence
+  #   seq_001    1.5      a,t,g,c,a,g,t,c,...
+  #   seq_002    2.3      a,t,g,c,a,g,t,c,...
+  #
+  # Then set:
+  idpos: 1                                # Column 1: ID
+  labelpos: 2                             # Column 2: Label (target value)
+  seqpos: 3                               # Column 3: Sequence
+  
+  # How to split your data
+  splitratio: [80, 20]                    # [train%, val%] or [train%, val%, test%]
+
+# ==============================================================
+# SECTION 4: TOKENIZATION
+# ==============================================================
+# ⚠️ PLUGIN-SPECIFIC: Plugin may override these!
+# - Saluki: MUST be atomic (one-hot nucleotides)
+# - XLNet: Can use bpe for flexible tokenization
+tokenization:
+  encoding: atomic                        # saluki: atomic | xlnet: bpe
+  vocabsize: 20000                        # Ignored for Saluki
+  samplesize: null                        # null=use all data, or set to N
+  minfreq: 2
+
+# ==============================================================
+# SECTION 5: TRAINING
+# ==============================================================
+# These settings control how the model is trained
+training:
+  seed: 42                                # For reproducibility
+  batchsize: 8                            # Batch size (adjust based on GPU)
+  nepochs: 50                             # Number of training epochs
+  patience: 5                             # Early stopping: stop after N epochs without improvement
+  
+  # ⚠️ Blocksize is ENFORCED by plugin! Don't set it here.
+  # - Saluki: blocksize = 12288 (fixed)
+  # - XLNet: blocksize = 512 (fixed)
+  
+  scaling: log                            # For data with wide range use "log", else "standard"
+  weightedregression: false               # Weight loss by target value (usually false)
+
+# ==============================================================
+# SECTION 6: EXPERIMENT TRACKING (Optional)
+# ==============================================================
+# MLflow is optional but recommended for tracking results
+settings:
+  mlflow:
+    enabled: true                         # Track experiments in MLflow
+    experiment_name: null                 # Auto-set if null
+    tracking_uri: null                    # Auto-detect if null
+
+# ==============================================================
+# SECTION 7: DEBUGGING & INFERENCE (Optional)
+# ==============================================================
+# Usually don't need to change these
+inference:
+  pretrainedmodel: null                   # For transfer learning
+
+debugging:
+  silent: false                           # Set to true to suppress output
+  dev: false                              # Set to true for quick testing on small dataset
+  accelerator: auto                       # Let system choose: auto/cpu/gpu/tpu

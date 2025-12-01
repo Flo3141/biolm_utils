@@ -1,0 +1,8 @@
+# XLNet Fine-tuning Mode Overrides
+# Use this to customize settings specifically for the fine-tuning step
+
+training:
+  # Can override any training setting here
+  nepochs: 150                            # Extend training if needed
+  batchsize: 16                           # Can handle larger batches with Transformers
+  patience: 20                            # Patient early stopping

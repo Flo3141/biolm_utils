@@ -1,0 +1,106 @@
+# XLNet Fine-tuning Example Configuration
+# ==============================================================
+# This example shows how to fine-tune the XLNet model on protein sequences
+# XLNet is a Transformer model optimized for shorter sequences (blocksize: 512)
+#
+# To use:
+#   poetry run biolm fine-tune --config-path ./exampleconfigs/xlnet-protein-finetuning
+#
+# Key points:
+# - XLNet works with proteins (amino acids) or shorter RNA sequences
+# - Blocksize is fixed at 512 (don't change it)
+# - Encoding uses BPE (byte-pair encoding) for flexible tokenization
+# - Can handle both regression and classification tasks
+
+mode: fine-tune
+task: regression
+plugin: xlnet
+
+# ============================================================
+# Protein Data File (XLNet example)
+# ============================================================
+# Expected format (tab-separated):
+#   protein_id       binding_score    MKVLWAALLVTFLAGCAKAKQ...
+#   prot_001         1.5              MKVLWAALLVTFLAGCAKAKQ...
+#   prot_002         2.3              MKVLWAALLVTFLAGCAKAKQ...
+#
+# XLNet can also handle RNA:
+#   rna_id           expression       atgcgatcgatcgatcgatc...
+#   rna_001          1.5              atgcgatcgatcgatcgatc...
+#
+# Note: Sequences can be raw (no comma-separation needed unlike Saluki)
+outputpath: /tmp/xlnet_protein_experiment
+
+data_source:
+  filepath: /path/to/your/protein_data.txt
+  stripheader: false
+  columnsep: "\t"                         # Tab-separated columns
+  tokensep: null                          # Not needed for raw sequences
+  idpos: 1                                # Column 1: Protein ID
+  labelpos: 2                             # Column 2: Binding score or other target
+  seqpos: 3                               # Column 3: Protein sequence
+  
+  # Split data: 80% training, 10% validation, 10% test
+  splitratio: [80, 10, 10]
+  
+  crossvalidation: false                  # Set to true for k-fold CV
+
+# ============================================================
+# Tokenization: XLNet Uses BPE (Byte-Pair Encoding)
+# ============================================================
+# BPE tokenization learns vocabulary from your data
+# This allows flexibility with protein, RNA, or mixed sequences
+tokenization:
+  encoding: bpe                           # Byte-pair encoding (standard)
+  vocabsize: 10000                        # Vocabulary size for BPE
+  samplesize: null                        # Use all data; set to N for sampling
+  minfreq: 2                              # Minimum frequency for token inclusion
+  maxtokenlength: 10                      # Maximum token length in vocabulary
+  lefttailing: false                      # Cut from right (False) or left (True)
+
+# ============================================================
+# Training: Optimized for XLNet
+# ============================================================
+# These settings work well for protein data with XLNet model
+training:
+  seed: 42                                # Reproducibility
+  blocksize: 512                          # XLNET: Fixed! Do NOT change.
+  batchsize: 8                            # Larger batches than Saluki (shorter sequences)
+  gradacc: 4                              # Gradient accumulation (8*4=32 effective batch)
+  nepochs: 100                            # Usually converges faster than Saluki
+  patience: 15                            # Standard early stopping
+  
+  # Data preprocessing
+  scaling: standard                       # Standard scaling for continuous targets
+  weightedregression: false               # Weight by target value (optional)
+
+# ============================================================
+# MLflow: Track Your Experiments
+# ============================================================
+settings:
+  mlflow:
+    enabled: true
+    experiment_name: xlnet-protein-finetuning
+    tracking_uri: null                    # Auto-detect MLflow server
+
+# ============================================================
+# Inference & Advanced
+# ============================================================
+inference:
+  pretrainedmodel: null                   # Set to checkpoint for transfer learning
+
+debugging:
+  silent: false                           # Show progress
+  dev: false                              # Set to true to test on small dataset
+  accelerator: auto                       # auto/cpu/gpu/tpu
+
+# ============================================================
+# Notes for First-Time Users
+# ============================================================
+# 1. Replace /path/to/your/protein_data.txt with your actual data file
+# 2. Check your data format: head -3 /path/to/your/protein_data.txt
+# 3. Sequences can be MKVL... (proteins) or atgc... (RNA)
+# 4. Run: poetry run biolm fine-tune --config-path ./exampleconfigs/xlnet-protein-finetuning
+# 5. Monitor progress in: outputpath/fine-tune.log
+# 6. View results in: outputpath/fine-tune/ (model weights, metrics, etc.)
+# 7. For classification: change task to "classification"

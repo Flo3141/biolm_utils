@@ -1,0 +1,13 @@
+# Mode-specific overrides for fine-tuning
+# This file is automatically combined with config.yaml when running:
+#   poetry run biolm fine-tune --config-path ./PLUGIN_TEMPLATE
+
+training:
+  # Override settings for fine-tuning (usually larger, longer training)
+  nepochs: 100
+  batchsize: 16
+  patience: 10
+
+settings:
+  mlflow:
+    enabled: true
