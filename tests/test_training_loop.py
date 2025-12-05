@@ -64,7 +64,7 @@ def test_minimal_training_loop(tmp_path):
         per_device_train_batch_size=2,
         per_device_eval_batch_size=1,
         disable_tqdm=True,
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         save_strategy="epoch",
         logging_strategy="no",
         remove_unused_columns=False,

@@ -2,11 +2,11 @@ name: unit-tests-fast
 
 on:
   pull_request:
-    branches: [ main, refactor-config-management ]
+    branches: [ main, biolm-2.0 ]
   push:
     paths:
-      - 'biolm_utils/**'
-    branches: [ main, refactor-config-management ]
+      - 'biolm/**'
+    branches: [ main, biolm-2.0 ]
 
 jobs:
   unit-tests:

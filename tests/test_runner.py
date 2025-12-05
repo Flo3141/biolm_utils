@@ -80,7 +80,7 @@ def test_predict_delegates_to_biolm_test(monkeypatch):
 
     # Call run with minimal required parameters for predict; model_save_path etc are not used
     val = run_fn(None, None, "test_ds", "mload", "msave", "report.json", "ranks.csv")
-    assert val == 0.42
+    assert val == {"metric": 0.42}
 
 
 def test_fine_tune_triggers_train_and_then_test(monkeypatch):
@@ -110,7 +110,7 @@ def test_fine_tune_triggers_train_and_then_test(monkeypatch):
         "train_ds", "val_ds", "test_ds", "mload", "msave", "report.json", "ranks.csv"
     )
     # fine-tune returns results from test when a test_dataset is present
-    assert res == 0.99
+    assert res == {"metric": 0.99}
     assert args.task == "regression"
 
 

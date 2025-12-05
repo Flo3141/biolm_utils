@@ -2,17 +2,33 @@ name: Plugin compatibility (smoke)
 
 on:
   push:
-    branches: [ main, refactor-config-management ]
+    branches: [ main, biolm-2.0 ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, biolm-2.0 ]
 
 jobs:
   plugin-compatibility:
     runs-on: ubuntu-latest
     name: Install plugins and test discovery
     steps:
-      - name: Checkout
+      - name: Checkout framework
         uses: actions/checkout@v4
+        with:
+          path: biolm_utils
+
+      - name: Checkout Saluki plugin
+        uses: actions/checkout@v4
+        with:
+          repository: dieterich-lab/rna_saluki_cnn
+          ref: saluki-2.0
+          path: rna_saluki_cnn
+
+      - name: Checkout XLNet plugin
+        uses: actions/checkout@v4
+        with:
+          repository: dieterich-lab/rna_protein_xlnet
+          ref: main
+          path: rna_protein_xlnet
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -20,23 +36,35 @@ jobs:
           python-version: '3.11'
 
       - name: Install Poetry
-        run: python -m pip install --upgrade pip poetry
-
-      - name: Install project deps (create Poetry venv)
         run: |
-          # Use Poetry to create and manage the virtual environment for the job
-          poetry install --no-interaction --no-ansi
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry --version
 
-      - name: Install plugin packages into Poetry venv
-        # Install a known list of plugins (update this list to add new plugins)
+      - name: Install plugins
         run: |
-          # Install the plugin package(s) into the Poetry virtualenv
-          poetry run python -m pip install --upgrade pip
-          poetry run python -m pip install --no-deps "git+https://github.com/dieterich-lab/rna_saluki_cnn.git@refactor-config-management#egg=saluki-plugin"
+          export PATH="$HOME/.local/bin:$PATH"
+          # Install Saluki plugin
+          cd rna_saluki_cnn
+          poetry install --no-interaction
+          cd ..
+          # Install XLNet plugin
+          cd rna_protein_xlnet
+          poetry install --no-interaction
+          cd ..
 
-      - name: Run plugin discovery compatibility tests
-        env:
-          # Plugins the workflow installed (comma-separated plugin names as exposed
-          # by the entry-point group). For the saluki-plugin this is `saluki`.
-          PLUGINS_LIST: saluki
-        run: poetry run python -m pytest -q tests/integration/test_plugin_compat.py
+      - name: Install framework with plugin dependencies
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          cd biolm_utils
+          # Update paths in pyproject.toml to CI workspace structure
+          sed -i 's|/home/pwiesenbach/rna_saluki_cnn|../rna_saluki_cnn|g' pyproject.toml
+          sed -i 's|/home/pwiesenbach/rna_protein_xlnet|../rna_protein_xlnet|g' pyproject.toml
+          poetry lock --no-update
+          poetry install --no-interaction --with plugins
+
+      - name: Run plugin discovery tests
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          cd biolm_utils
+          poetry run pytest -xvs tests/integration/test_plugin_discovery.py
