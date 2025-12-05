@@ -29,7 +29,11 @@ class RegressionTrainer(Trainer):
         from datetime import datetime
 
         # Call the parent log method to preserve default logging behavior
-        super().log(logs, start_time)
+        # Pass start_time if provided (for transformers>=4.x compatibility)
+        if start_time is not None:
+            super().log(logs, start_time)
+        else:
+            super().log(logs)
 
         # Add custom logging for metrics
         if "loss" in logs or "learning_rate" in logs:  # Metrics-related logs

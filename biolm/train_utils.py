@@ -60,6 +60,40 @@ class IdentityScaler:
         return data
 
 
+def _apply_model_overrides(model_config, model_overrides):
+    if not model_overrides:
+        return
+
+    if hasattr(model_overrides, "items"):
+        items = model_overrides.items()
+    else:
+        items = model_overrides.__dict__.items()
+
+    alias_map = {
+        "num_layers": "n_layer",
+        "num_heads": "n_head",
+        "hidden_size": "d_model",
+        "intermediate_size": "d_inner",
+    }
+
+    for key, value in items:
+        if value is None:
+            continue
+        targets = []
+        if key in alias_map:
+            targets.append(alias_map[key])
+        targets.append(key)
+        for attr in targets:
+            try:
+                setattr(model_config, attr, value)
+            except Exception:
+                # Some configs guard attribute setting; fall back to dict-style storage
+                try:
+                    model_config.__dict__[attr] = value
+                except Exception:
+                    pass
+
+
 def compute_metrics_for_regression(dataset, savepath):
     def _compute_metrics(pred):
         logits, labels = pred
@@ -204,16 +238,63 @@ def get_tokenizer(args, tokenizer_file, tokenizer_cls, pretraining_required):
         )
 
         # Load from HuggingFace format directory
-        tokenizer = tokenizer_cls.from_pretrained(
-            str(tokenizer_file),
-            model_max_length=blocksize,
-            truncation=True,
-            truncation_side=(
+        tokenizer_dir = tokenizer_file
+        tokenizer_kwargs = {
+            "model_max_length": blocksize,
+            "truncation": True,
+            "truncation_side": (
                 "left"
                 if getattr(getattr(args, "tokenization", None), "lefttailing", False)
                 else "right"
             ),
-        )
+        }
+
+        try:
+            tokenizer = tokenizer_cls.from_pretrained(
+                str(tokenizer_dir),
+                **tokenizer_kwargs,
+            )
+        except (TypeError, OSError, FileNotFoundError) as exc:
+            logger.warning(
+                "Tokenizer %s couldn't be loaded via from_pretrained: %s",
+                tokenizer_cls.__name__,
+                exc,
+            )
+            # Some fast tokenizers (e.g. XLNetTokenizerFast) still attempt to load a slow tokenizer
+            # when using `from_pretrained`, which fails for our lightweight HuggingFace-format dumps
+            # that only contain `tokenizer.json`. Fall back to constructing the tokenizer directly
+            # from that JSON artifact so legacy pipelines keep working in tests.
+            tokenizer_json = tokenizer_dir / "tokenizer.json"
+            if not tokenizer_json.exists():
+                raise
+
+            tokenizer_config_json = tokenizer_dir / "tokenizer_config.json"
+            config_overrides = {}
+            if tokenizer_config_json.exists():
+                with open(tokenizer_config_json, "r") as cfg:
+                    tok_config = json.load(cfg)
+                for key in [
+                    "cls_token",
+                    "unk_token",
+                    "mask_token",
+                    "pad_token",
+                    "sep_token",
+                    "bos_token",
+                    "eos_token",
+                    "model_max_length",
+                    "truncation_side",
+                ]:
+                    if key in tok_config:
+                        config_overrides[key] = tok_config[key]
+
+            # Respect fallback kwargs but let config settings win when provided.
+            tokenizer = tokenizer_cls(
+                tokenizer_file=str(tokenizer_json),
+                **{**tokenizer_kwargs, **config_overrides},
+            )
+            logger.warning(
+                "Loaded tokenizer directly from %s due to %s", tokenizer_json, exc
+            )
     tokenizer.name_or_path = tokenizer_file
     return tokenizer
 
@@ -519,6 +600,7 @@ def get_model_and_config(
             dataset=dataset,
             nlabels=nlabels,
         )
+        _apply_model_overrides(model_config, getattr(args, "model", None))
         if not getattr(getattr(args, "training", None), "resume", False):
             if args.mode == "pre-train":
                 logger.info(f"Initializing new {model_cls} model for pre-training.")

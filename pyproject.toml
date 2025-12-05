@@ -30,7 +30,8 @@ repository = "https://github.com/dieterich-lab/biolm_utils"
 biolm = "biolm.cli:parse_args"
 
 [project.entry-points."biolm.plugins"]
-# Plugins registered here
+saluki = "biolm.plugins.builtin:register_saluki_plugin"
+xlnet = "biolm.plugins.builtin:register_xlnet_plugin"
 
 [tool.poetry]
 # Legacy section for Poetry compatibility
@@ -54,8 +55,6 @@ torchaudio = "2.3.1"
 torchvision = "0.18.1"
 transformers = "4.57.3"
 mlflow = "^3.6.0"
-rna-saluki-cnn = {path = "./plugins/saluki", develop = true}
-rna-protein-xlnet = {path = "./plugins/xlnet", develop = true}
 
 [tool.poetry.group.dev]
 optional = false
@@ -82,7 +81,8 @@ repository = "https://github.com/dieterich-lab/biolm_utils"
 biolm = "biolm.cli:parse_args"
 
 [tool.poetry.plugins."biolm.plugins"]
-saluki = "saluki_plugin.config:get_saluki_config"
+saluki = "biolm.plugins.builtin:register_saluki_plugin"
+xlnet = "biolm.plugins.builtin:register_xlnet_plugin"
 
 [tool.pyright]
 typeCheckingMode = "off"

@@ -15,3 +15,4 @@ data_source:
   splitpos: null
   devsplits: null
   testsplits: null
+mode: tokenize

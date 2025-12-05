@@ -135,7 +135,7 @@ def _build_training_args(model_save_path, val_dataset, config, train_dataset):
         log_level="info",
         warmup_ratio=0.05 if is_pre_train else 0.0,
         remove_unused_columns=False,
-        dataloader_drop_last=True,
+        dataloader_drop_last=False,
         label_names=["labels"],
         learning_rate=config.learning_rate,
         max_grad_norm=config.max_grad_norm,

@@ -8,6 +8,8 @@ defaults:
 # mode: tokenize
 outputpath: null
 task: null
+plugin: null
+model: {}
 
 # Data source (will be overridden by mode-specific defaults)
 data_source:
@@ -16,9 +18,9 @@ data_source:
   columnsep: "\t"
   tokensep: ","
   specifiersep: null
-  idpos: null
-  seqpos: null
-  labelpos: null
+  idpos: 1
+  seqpos: 1
+  labelpos: 2
   crossvalidation: null
   splitratio: null
   splitpos: null
@@ -41,6 +43,7 @@ training:
   batchsize: 8
   gradacc: 4
   nepochs: 100
+  num_epochs: null
   patience: 10
   resume: false
   scaling: log
@@ -79,3 +82,4 @@ debugging:
   dev: false
   getdata: false
   forcenewdata: false
+  accelerator: cpu

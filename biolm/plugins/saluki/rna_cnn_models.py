@@ -154,9 +154,15 @@ class HFSaluki(PreTrainedModel):
 
     @staticmethod
     def get_config(args, config_cls, tokenizer, dataset, nlabels):
+        # Access blocksize from training config
+        blocksize = (
+            getattr(args.training, "blocksize", None)
+            if hasattr(args, "training")
+            else getattr(args, "blocksize", None)
+        )
         config = config_cls(
             vocab_size=len(tokenizer),
-            max_position_embeddings=args.blocksize,
+            max_position_embeddings=blocksize,
             pad_token_id=tokenizer.pad_token_id,
         )
         config.input_size = dataset.OHE.categories_[0].size + dataset.nspecs

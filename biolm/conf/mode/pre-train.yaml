@@ -1,12 +1,14 @@
 # @package _global_
 
 # Pre-train specific settings
+mode: pre-train
 task: pre-train
 training:
   seed: 42
   batchsize: 8
   gradacc: 4
   nepochs: 100
+  num_epochs: null
   patience: 10
   resume: false
   scaling: log

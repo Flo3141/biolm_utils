@@ -436,6 +436,8 @@ class CrossValidator:
         )
 
 
+# Deprecated: parametrized_decorator
+# Use CrossValidator + make_run_fn instead.
 def parametrized_decorator(params, dataset):
     """Backward-compatible wrapper: returns a decorator that instantiates
     CrossValidator and uses it to call the provided function.

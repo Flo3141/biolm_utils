@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from sklearn.preprocessing import OneHotEncoder
 
-from biolm_utils.rna_datasets import RNABaseDataset
+from biolm.rna_datasets import RNABaseDataset
 
 
 class RNACNNDataset(RNABaseDataset):
@@ -23,7 +23,13 @@ class RNACNNDataset(RNABaseDataset):
         example["input_ids"] = self.OHE.transform(
             np.reshape(example["input_ids"], (-1, 1))
         )
-        if self.args.specifiersep is not None:
+        # Access specifiersep from data_source config
+        specifiersep = (
+            getattr(self.args.data_source, "specifiersep", None)
+            if hasattr(self.args, "data_source")
+            else getattr(self.args, "specifiersep", None)
+        )
+        if specifiersep is not None:
             spec = self.specs[i]
             example["input_ids"] = np.concatenate((example["input_ids"], spec), axis=1)
         example["input_ids"] = torch.tensor(example["input_ids"], dtype=torch.float)

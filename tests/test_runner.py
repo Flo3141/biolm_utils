@@ -1,7 +1,12 @@
 import pytest
 
 from biolm.runner import make_run_fn
-from biolm.structured_config import BioLMConfig, DebuggingConfig, TrainingConfig
+from biolm.structured_config import (
+    BioLMConfig,
+    DataSourceConfig,
+    DebuggingConfig,
+    TrainingConfig,
+)
 
 
 class DummyConfig:
@@ -13,13 +18,13 @@ class DummyConfig:
     add_special_tokens = False
 
 
-def _make_args(mode="predict"):
+def _make_args(mode="predict", task="classification"):
     # minimal structured config used by the runner
     return BioLMConfig(
         mode=mode,
         training=TrainingConfig(batchsize=1, nepochs=1, resume=False),
         debugging=DebuggingConfig(dev=False, silent=True),
-        task="classification",
+        task=task,
     )
 
 
@@ -96,7 +101,9 @@ def test_fine_tune_triggers_train_and_then_test(monkeypatch):
     monkeypatch.setattr(mod, "train", fake_train)
     monkeypatch.setattr(mod, "test", fake_test)
 
-    args = _make_args(mode="fine-tune")
+    args = _make_args(mode="fine-tune", task="regression")
+    args.data_source = DataSourceConfig(filepath="/path/to/data", splitratio=[80, 20])
+
     run_fn = make_run_fn(args, DummyConfig(), None, None, None)
 
     res = run_fn(
@@ -104,6 +111,7 @@ def test_fine_tune_triggers_train_and_then_test(monkeypatch):
     )
     # fine-tune returns results from test when a test_dataset is present
     assert res == 0.99
+    assert args.task == "regression"
 
 
 def test_interpret_delegates_to_loo_scores(monkeypatch):

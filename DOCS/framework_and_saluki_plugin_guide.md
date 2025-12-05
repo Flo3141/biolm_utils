@@ -153,11 +153,13 @@ callable that the framework discovers at runtime. This keeps plugins separate
 and avoids embedding plugin code into the framework's source tree.
 
 Discovery strategy (order of preference):
+
 - Entry-points (primary): use `importlib.metadata.entry_points()` to find
     `biolm_utils.plugins` entries and load the corresponding factory.
-- plugins/ directory (fallback): for local development or legacy setups the
-    framework will attempt to import modules placed in a `plugins/` directory
-    (e.g., for quick checks or local-only plugin development without packaging).
+- Built-in registry (fallback): the framework ships with a curated
+    `biolm.plugins.builtin` module that can register the stock Saluki and
+    XLNet plugins when no entry-point package is found.
+
 
 Example (entry-point usage):
 

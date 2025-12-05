@@ -73,20 +73,6 @@
       {
         "type": "Replace",
         "pattern": {
-          "Regex": "None[^,]*"
-        },
-        "content": ""
-      },
-      {
-        "type": "Replace",
-        "pattern": {
-          "String": ","
-        },
-        "content": " "
-      },
-      {
-        "type": "Replace",
-        "pattern": {
           "String": "\""
         },
         "content": ""
@@ -107,7 +93,7 @@
       {
         "type": "Split",
         "pattern": {
-          "Regex": "([^\t]*\t){2}"
+          "Regex": "([^\t]*\t){0}"
         },
         "behavior": "Removed",
         "invert": false
@@ -118,6 +104,14 @@
           "Regex": "\t.*"
         },
         "behavior": "Removed",
+        "invert": false
+      },
+      {
+        "type": "Split",
+        "pattern": {
+          "Regex": "."
+        },
+        "behavior": "Isolated",
         "invert": false
       },
       {
@@ -147,10 +141,23 @@
       "[MASK]": 4,
       "[BOS]": 5,
       "[EOS]": 6,
-      "t": 7,
-      "a": 8,
-      "c": 9,
-      "g": 10
+      "U": 7,
+      "e": 8,
+      "A": 9,
+      "G": 10,
+      ".": 11,
+      "0": 12,
+      "C": 13,
+      "l": 14,
+      "1": 15,
+      "5": 16,
+      "a": 17,
+      "b": 18,
+      "c": 19,
+      "n": 20,
+      "q": 21,
+      "s": 22,
+      "u": 23
     },
     "unk_token": "[UNK]"
   }

@@ -34,6 +34,11 @@ def _process_hydra_config(cfg: DictConfig) -> BioLMConfig:
     if not isinstance(config_dict, dict):
         raise RuntimeError("Configuration must resolve to a dictionary")
 
+    # Backward compatibility: allow legacy `model=` CLI overrides to select plugins.
+    model_value = config_dict.get("model")
+    if isinstance(model_value, str) and model_value and not config_dict.get("plugin"):
+        config_dict["plugin"] = model_value
+
     # Validate that task is provided for modes that require it
     if "mode" in config_dict:
         mode = config_dict["mode"]
@@ -85,7 +90,7 @@ def _process_hydra_config(cfg: DictConfig) -> BioLMConfig:
 
     # Build kwargs for BioLMConfig, only including fields that are present
     biolm_kwargs = {}
-    for field_name in ["mode", "outputpath", "task", "plugin"]:
+    for field_name in ["mode", "outputpath", "task", "plugin", "model"]:
         if field_name in config_dict:
             biolm_kwargs[field_name] = config_dict[field_name]
 
@@ -153,6 +158,19 @@ def load_config(overrides: Optional[List[str]] = None) -> BioLMConfig:
             except Exception:
                 # mode file optional — don't fail hard if not present
                 pass
+
+            if not cfg.data_source.splitratio:
+                cfg.data_source.splitratio = [80, 20]
+
+            # Explicitly handle filepath override
+            for ov in overrides:
+                if isinstance(ov, str) and ov.startswith("data_source.filepath="):
+                    cfg.data_source.filepath = ov.split("=", 1)[1]
+                    break
+
+            print("DEBUG: data_source.splitratio:", cfg.data_source.splitratio)
+            print("DEBUG: mode:", cfg.mode)
+            print("DEBUG: data_source.filepath:", cfg.data_source.filepath)
 
             return _process_hydra_config(cfg)
     finally:

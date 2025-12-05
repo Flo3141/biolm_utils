@@ -1,6 +1,7 @@
 # @package _global_
 
 # Interpret specific settings
+mode: interpret
 task: regression
 data_source:
   filepath: null

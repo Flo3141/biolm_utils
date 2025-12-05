@@ -36,14 +36,6 @@ echo "Setting up BioLM Framework..."
 echo "  Repository: $SCRIPT_DIR"
 echo ""
 
-# Initialize submodules if not already present
-if [ ! -f "$SCRIPT_DIR/plugins/saluki/saluki_plugin/__init__.py" ]; then
-    echo "Cloning plugins (first time setup)..."
-    git -C "$SCRIPT_DIR" submodule update --init --recursive
-    echo "✓ Plugins cloned"
-    echo ""
-fi
-
 # Set up Poetry environment
 echo "Installing dependencies with Poetry..."
 cd "$SCRIPT_DIR"
@@ -60,12 +52,12 @@ echo "1. Navigate to the framework:"
 echo "   cd $SCRIPT_DIR"
 echo ""
 echo "2. Run your first experiment:"
-echo "   poetry run biolm fine-tune --config-path ./plugins/saluki/_exampleconfigs/flo"
+echo "   poetry run biolm fine-tune --config-path ./biolm/plugins/saluki/exampleconfigs/tokenize_fine-tune.yaml"
 echo ""
 echo "3. View available commands:"
 echo "   poetry run biolm --help"
 echo ""
-echo "Available Plugins:"
-echo "  • Saluki (RNA analysis):     ./plugins/saluki"
-echo "  • XLNet (Protein analysis):  ./plugins/xlnet"
+echo "Available Plugins (built-in):"
+echo "  • Saluki (RNA analysis)"
+echo "  • XLNet (Protein analysis)"
 echo ""

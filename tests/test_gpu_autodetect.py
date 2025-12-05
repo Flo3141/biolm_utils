@@ -27,21 +27,45 @@ class TestGPUAutodetect:
         # Ensure no torch module available
         monkeypatch.delitem(sys.modules, "torch", raising=False)
 
-        ns = load_config(["mode=tokenize", "debugging.accelerator=gpu"])
+        ns = load_config(
+            [
+                "mode=tokenize",
+                "debugging.accelerator=gpu",
+                "task=regression",
+                "data_source.splitratio=[80, 20]",
+                "data_source.filepath=/path/to/data",
+            ]
+        )
         # No torch -> fallback to CPU and detected_ngpus should be 1
         assert ns.debugging.detected_ngpus == 1
         assert get_detected_ngpus(ns) == 1
 
     def test_non_power_of_two_reduced(self, monkeypatch):
         monkeypatch.setitem(sys.modules, "torch", _make_dummy_torch(3))
-        ns = load_config(["mode=tokenize", "debugging.accelerator=gpu"])
+        ns = load_config(
+            [
+                "mode=tokenize",
+                "debugging.accelerator=gpu",
+                "task=regression",
+                "data_source.splitratio=[80, 20]",
+                "data_source.filepath=/path/to/data",
+            ]
+        )
         # 3 GPUs -> reduced to 2 (highest power of two <= 3)
         assert ns.debugging.detected_ngpus == 2
         assert get_detected_ngpus(ns) == 2
 
     def test_power_of_two_respected(self, monkeypatch):
         monkeypatch.setitem(sys.modules, "torch", _make_dummy_torch(4))
-        ns = load_config(["mode=tokenize", "debugging.accelerator=gpu"])
+        ns = load_config(
+            [
+                "mode=tokenize",
+                "debugging.accelerator=gpu",
+                "task=regression",
+                "data_source.splitratio=[80, 20]",
+                "data_source.filepath=/path/to/data",
+            ]
+        )
         assert ns.debugging.detected_ngpus == 4
         assert get_detected_ngpus(ns) == 4
 

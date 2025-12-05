@@ -1,6 +1,7 @@
 # @package _global_
 
 # Fine-tune specific settings
+mode: fine-tune
 task: regression
 data_source:
   filepath: null
@@ -21,6 +22,7 @@ training:
   batchsize: 8
   gradacc: 4
   nepochs: 100
+  num_epochs: null
   patience: 10
   resume: false
   scaling: log

@@ -44,10 +44,15 @@ class TrainingConfig:
     gradacc: int = 4
     blocksize: Optional[int] = None
     nepochs: int = 100
+    num_epochs: Optional[int] = None
     patience: int = 10
     resume: bool = False
     scaling: str = "log"
     weightedregression: bool = False
+
+    def __post_init__(self):
+        if self.num_epochs is not None:
+            self.nepochs = self.num_epochs
 
 
 @dataclass
@@ -84,6 +89,7 @@ class BioLMConfig:
     task: Optional[str] = None
     plugin: Optional[str] = None
     outputpath: Optional[Path] = None
+    model: Optional[Dict[str, Any]] = None
     data_source: Optional[DataSourceConfig] = None
     tokenization: Optional[TokenizationConfig] = None
     training: Optional[TrainingConfig] = None
