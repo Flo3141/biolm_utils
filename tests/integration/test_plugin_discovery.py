@@ -53,11 +53,22 @@ def test_xlnet_plugin_registered():
 
 
 def test_plugin_loading_saluki():
-    """Test that the Saluki plugin can be loaded via PluginManager."""
+    """Test that the Saluki plugin can be loaded via entry point."""
+    import importlib.metadata
+
     from biolm.plugin_config import PluginManager
 
-    config = PluginManager.load_plugin("saluki")
+    # Load plugin via entry point (simulates what cli.py does)
+    eps = importlib.metadata.entry_points(group="biolm.plugins")
+    saluki_ep = next((ep for ep in eps if ep.name == "saluki"), None)
+    assert saluki_ep is not None, "Saluki entry point not found"
 
+    # Load and execute the plugin function
+    plugin_func = saluki_ep.load()
+    plugin_func()
+
+    # Get the config that was set by the plugin
+    config = PluginManager.get_config()
     assert config is not None, "Saluki plugin config is None"
     assert (
         config.model_cls_for_finetuning is not None
@@ -67,11 +78,22 @@ def test_plugin_loading_saluki():
 
 
 def test_plugin_loading_xlnet():
-    """Test that the XLNet plugin can be loaded via PluginManager."""
+    """Test that the XLNet plugin can be loaded via entry point."""
+    import importlib.metadata
+
     from biolm.plugin_config import PluginManager
 
-    config = PluginManager.load_plugin("xlnet")
+    # Load plugin via entry point (simulates what cli.py does)
+    eps = importlib.metadata.entry_points(group="biolm.plugins")
+    xlnet_ep = next((ep for ep in eps if ep.name == "xlnet"), None)
+    assert xlnet_ep is not None, "XLNet entry point not found"
 
+    # Load and execute the plugin function
+    plugin_func = xlnet_ep.load()
+    plugin_func()
+
+    # Get the config that was set by the plugin
+    config = PluginManager.get_config()
     assert config is not None, "XLNet plugin config is None"
     assert (
         config.model_cls_for_pretraining is not None
@@ -119,9 +141,17 @@ def test_plugin_discovery_without_framework_import():
 @pytest.mark.parametrize("plugin_name", ["saluki", "xlnet"])
 def test_plugin_config_attributes(plugin_name):
     """Test that plugin configs have all required attributes."""
+    import importlib.metadata
+
     from biolm.plugin_config import PluginManager
 
-    config = PluginManager.load_plugin(plugin_name)
+    # Load plugin via entry point
+    eps = importlib.metadata.entry_points(group="biolm.plugins")
+    ep = next((e for e in eps if e.name == plugin_name), None)
+    assert ep is not None, f"{plugin_name} entry point not found"
+    plugin_func = ep.load()
+    plugin_func()
+    config = PluginManager.get_config()
 
     # Required attributes
     required_attrs = [
@@ -143,12 +173,19 @@ def test_plugin_config_attributes(plugin_name):
 
 def test_plugin_models_are_callable():
     """Verify that plugin model classes can be instantiated."""
+    import importlib.metadata
     from unittest.mock import MagicMock
 
     from biolm.plugin_config import PluginManager
 
     for plugin_name in ["saluki", "xlnet"]:
-        config = PluginManager.load_plugin(plugin_name)
+        # Load plugin via entry point
+        eps = importlib.metadata.entry_points(group="biolm.plugins")
+        ep = next((e for e in eps if e.name == plugin_name), None)
+        assert ep is not None, f"{plugin_name} entry point not found"
+        plugin_func = ep.load()
+        plugin_func()
+        config = PluginManager.get_config()
 
         # Check that model classes are callable
         model_cls = config.model_cls_for_finetuning
