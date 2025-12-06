@@ -123,9 +123,6 @@ def run_command(cmd, cwd="/prj/RNA_NLP/biolm_utils", timeout=600):
     return result
 
 
-@pytest.mark.skip(
-    reason="XLNet's permutation mask requires even-length sequences after tokenization - complex to guarantee with small test dataset"
-)
 def test_xlnet_full_pipeline(tiny_dataset):
     """Test full XLNet pipeline: tokenize -> pre-train -> fine-tune -> test."""
     debug_log("=" * 80)
@@ -174,9 +171,11 @@ def test_xlnet_full_pipeline(tiny_dataset):
             "mode=pre-train",
             "model=xlnet",
             "training.num_epochs=1",
+            "+training.blocksize=512",  # XLNet uses 512 tokens (standard transformer length) for padding/truncation
             "model.num_layers=1",
             "model.hidden_size=32",
             "model.num_heads=2",
+            "model.d_head=16",  # Must be hidden_size // num_heads (32 / 2 = 16)
             "model.intermediate_size=64",
             "debugging.accelerator=cpu",
             "training.batchsize=1",
@@ -204,13 +203,17 @@ def test_xlnet_full_pipeline(tiny_dataset):
             "task=regression",
             "model=xlnet",
             "training.num_epochs=1",
+            "+training.blocksize=512",  # XLNet uses 512 tokens for padding/truncation
             "model.num_layers=1",
             "model.hidden_size=32",
             "model.num_heads=2",
+            "model.d_head=16",  # Must be hidden_size // num_heads (32 / 2 = 16)
             "model.intermediate_size=64",
             "debugging.accelerator=cpu",
             "training.batchsize=1",
-            "data_source.splitratio=[70,15,15]",
+            "data_source.seqpos=1",  # XLNet format: seq\tlabel
+            "data_source.labelpos=2",
+            "data_source.splitratio=[60,20,20]",  # More balanced split for tiny dataset (6/2/2 samples)
         ]
         result = run_command(finetune_cmd, timeout=900)
         assert result.returncode == 0, f"Fine-tuning failed:\n{result.stderr}"
