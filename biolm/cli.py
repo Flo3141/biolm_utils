@@ -87,20 +87,6 @@ def parse_args(cfg: DictConfig):
             traceback.print_exc()
 
         if not plugin_loaded:
-            try:
-                from .plugins.builtin import load_builtin_plugin
-
-                plugin_loaded = load_builtin_plugin(processed_config.plugin)
-                if plugin_loaded:
-                    print(
-                        f"Plugin {processed_config.plugin} loaded via built-in configuration."
-                    )
-            except Exception as e:  # pragma: no cover - defensive fallback
-                print(
-                    f"Warning: Built-in plugin loader failed for {processed_config.plugin}: {e}"
-                )
-
-        if not plugin_loaded:
             print(
                 "Warning: Plugin {name} could not be loaded. Available entry-point plugins: {available}.".format(
                     name=processed_config.plugin,

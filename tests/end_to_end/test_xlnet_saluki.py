@@ -2,9 +2,10 @@
 End-to-end tests for plugin system integration.
 
 These tests verify that:
-1. Plugins load correctly (via entry points or built-in loaders)
-2. Mode dispatch works correctly (including graceful handling of unsupported modes)
-3. Error messages are informative
+1. Plugins load correctly via entry points
+2. Plugin configurations are correct
+3. Mode dispatch works correctly (including graceful handling of unsupported modes)
+4. Error messages are informative
 """
 
 import logging
@@ -22,32 +23,36 @@ def debug_log(msg):
 
 
 def test_plugin_loading():
-    """Test that plugins can be loaded via built-in loader."""
+    """Test that plugins can be loaded via entry points."""
     debug_log("Starting plugin loading test")
 
-    # This should load the built-in plugins if entry points are unavailable
     command = [
         "poetry",
         "run",
         "python",
         "-c",
         """
+import importlib.metadata
 from biolm.plugin_config import PluginManager
-from biolm.plugins.builtin import register_xlnet_plugin, register_saluki_plugin
 
-# Test loading XLNet plugin
-xlnet_result = register_xlnet_plugin()
-print(f"XLNet plugin loaded: {xlnet_result}")
+# Test loading XLNet plugin via entry point
+eps = importlib.metadata.entry_points(group='biolm.plugins')
+xlnet_ep = next(ep for ep in eps if ep.name == 'xlnet')
+xlnet_config_fn = xlnet_ep.load()
+xlnet_config_fn()
 config = PluginManager.get_config()
+print(f"XLNet plugin loaded: True")
 print(f"XLNet pretraining_required: {config.pretraining_required}")
 
 # Reset for next plugin
 PluginManager._config = None
 
-# Test loading Saluki plugin
-saluki_result = register_saluki_plugin()
-print(f"Saluki plugin loaded: {saluki_result}")
+# Test loading Saluki plugin via entry point
+saluki_ep = next(ep for ep in eps if ep.name == 'saluki')
+saluki_config_fn = saluki_ep.load()
+saluki_config_fn()
 config = PluginManager.get_config()
+print(f"Saluki plugin loaded: True")
 print(f"Saluki pretraining_required: {config.pretraining_required}")
 """,
     ]
@@ -74,17 +79,20 @@ def test_saluki_unsupported_pretraining():
     """Test that Saluki plugin config shows pretraining_required=False."""
     debug_log("Starting Saluki pre-train check")
 
-    # Just verify the config is set up correctly to disallow pre-training
     command = [
         "poetry",
         "run",
         "python",
         "-c",
         """
+import importlib.metadata
 from biolm.plugin_config import PluginManager
-from biolm.plugins.builtin import register_saluki_plugin
 
-register_saluki_plugin()
+# Load Saluki plugin via entry point
+eps = importlib.metadata.entry_points(group='biolm.plugins')
+saluki_ep = next(ep for ep in eps if ep.name == 'saluki')
+config_fn = saluki_ep.load()
+config_fn()
 config = PluginManager.get_config()
 
 # Verify Saluki doesn't support pre-training
@@ -123,10 +131,14 @@ def test_xlnet_plugin_config():
         "python",
         "-c",
         """
+import importlib.metadata
 from biolm.plugin_config import PluginManager
-from biolm.plugins.builtin import register_xlnet_plugin
 
-register_xlnet_plugin()
+# Load XLNet plugin via entry point
+eps = importlib.metadata.entry_points(group='biolm.plugins')
+xlnet_ep = next(ep for ep in eps if ep.name == 'xlnet')
+config_fn = xlnet_ep.load()
+config_fn()
 config = PluginManager.get_config()
 
 # Verify all expected attributes are present
@@ -169,10 +181,14 @@ def test_saluki_plugin_config():
         "python",
         "-c",
         """
+import importlib.metadata
 from biolm.plugin_config import PluginManager
-from biolm.plugins.builtin import register_saluki_plugin
 
-register_saluki_plugin()
+# Load Saluki plugin via entry point
+eps = importlib.metadata.entry_points(group='biolm.plugins')
+saluki_ep = next(ep for ep in eps if ep.name == 'saluki')
+config_fn = saluki_ep.load()
+config_fn()
 config = PluginManager.get_config()
 
 # Verify all expected attributes are present
