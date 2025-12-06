@@ -1,8 +1,0 @@
-# Saluki Fine-tuning Mode Overrides
-# Use this to customize settings specifically for the fine-tuning step
-
-training:
-  # Can override any training setting here
-  nepochs: 300                            # Extend training if needed
-  batchsize: 2                            # Keep small due to sequence length
-  patience: 30                            # Very patient early stopping

@@ -1,201 +1,206 @@
-# BioLM 2.0
+# BioLM 2.0 Framework
 
-A modular framework for training and interpreting language models on biological sequences (RNA/protein). Features a **plugin architecture** where models are separate packages that can be developed, versioned, and released independently.
+A modular PyTorch framework for training language models on biological sequences (RNA/protein). Features a **plugin architecture** where model implementations are separate packages developed and versioned independently.
 
-## 🚀 Quick Start
+## 🎯 Quick Start
 
 ### Prerequisites
 - Python 3.10+
-- Poetry ([python-poetry.org](https://python-poetry.org/))
+- Poetry ([install guide](https://python-poetry.org/docs/#installation))
 
 ### Installation
 
-#### Option 1: Using the install script (recommended)
-
 ```bash
-# Clone repositories side by side
+# 1. Clone framework and plugins (side by side)
 git clone https://github.com/dieterich-lab/biolm_utils.git
 git clone https://github.com/dieterich-lab/rna_saluki_cnn.git
 git clone https://github.com/dieterich-lab/rna_protein_xlnet.git
 
-# Run installation script
+# 2. Run installation script
 cd biolm_utils
 ./install.sh --with-plugins
-```
-
-#### Option 2: Manual installation
-
-```bash
-# Install framework
-cd biolm_utils
-poetry install
-
-# Install plugins (optional)
-cd ../rna_saluki_cnn && poetry install
-cd ../rna_protein_xlnet && poetry install
-
-# Link plugins to framework
-cd ../biolm_utils
-poetry install --with plugins
 ```
 
 ### Verify Installation
 
 ```bash
+cd biolm_utils
 poetry run python -c "
 import importlib.metadata
 eps = importlib.metadata.entry_points(group='biolm.plugins')
-print('Available plugins:')
+print('✅ Available plugins:')
 for ep in eps:
-    print(f'  - {ep.name}')
+    print(f'  • {ep.name}')
 "
 ```
 
-### Run Your First Experiment
+### Run Your First Training
 
 ```bash
-# Use Saluki model for RNA regression
-poetry run biolm fine-tune \
-    --model saluki \
-    --task regression \
-    --data-source.train data/train.tsv \
-    --data-source.dev data/dev.tsv
+# Copy config template
+cp -r biolm/examples/plugin_template my_experiment
+
+# Edit my_experiment/config.yaml:
+#   - outputpath: /path/to/results
+#   - data_source.filepath: /path/to/data.txt
+#   - plugin: saluki (RNA) or xlnet (protein)
+
+# Run fine-tuning
+poetry run biolm fine-tune --config-path ./my_experiment
 ```
 
-## 🧩 Plugin Architecture
+**📖 For detailed instructions, see [docs/INSTALLATION.md](docs/INSTALLATION.md)**
 
-BioLM 2.0 uses a **plugin system** where model implementations are separate packages:
+## 📊 Data Format
+
+Your input file should be **tab-separated**:
 
 ```
-biolm_utils/              # Core framework
-  ├── biolm/              # Training/evaluation engine
-  ├── tests/              # Framework tests
-  └── install.sh          # Installation script
+ID          Label    Sequence
+seq_001     1.5      a,t,g,c,a,g,t,c,...
+seq_002     2.3      a,t,g,c,a,g,t,c,...
+```
 
-rna_saluki_cnn/           # Saluki plugin (separate repo)
-  └── saluki_plugin/      
-      ├── models.py       # CNN-based model
-      ├── dataset.py      # One-hot encoding dataset
-      └── config.py       # Plugin registration
+**Important:** Column positions are **1-indexed** (1, 2, 3...).
 
-rna_protein_xlnet/        # XLNet plugin (separate repo)
-  └── xlnet_plugin/
-      ├── models.py       # XLNet architecture
-      ├── dataset.py      # Tokenized dataset
-      └── config.py       # Plugin registration
+## 🚀 Usage
+
+### Training Pipeline
+
+```bash
+# Step 1: Tokenize (builds vocabulary)
+poetry run biolm tokenize --config-path ./my_experiment
+
+# Step 2: Pre-train (XLNet only)
+poetry run biolm pre-train --config-path ./my_experiment
+
+# Step 3: Fine-tune on your task
+poetry run biolm fine-tune --config-path ./my_experiment
+
+# Step 4: Make predictions
+poetry run biolm predict --config-path ./my_experiment
+
+# Step 5: Interpret (feature importance)
+poetry run biolm interpret --config-path ./my_experiment
 ```
 
 ### Available Plugins
 
-| Plugin | Model | Task | Repository |
-|--------|-------|------|------------|
-| **saluki** | CNN with GRU | RNA stability prediction | [rna_saluki_cnn](https://github.com/dieterich-lab/rna_saluki_cnn) |
-| **xlnet** | Transformer (XLNet) | RNA/protein pretraining & fine-tuning | [rna_protein_xlnet](https://github.com/dieterich-lab/rna_protein_xlnet) |
+| Plugin | Model | Sequences | Pre-training | Use Case |
+|--------|-------|-----------|--------------|----------|
+| **saluki** | Saluki CNN | RNA | ❌ No | RNA regulatory prediction (12K tokens) |
+| **xlnet** | XLNet | Protein | ✅ Required | Protein function (512 tokens) |
 
-### Creating Your Own Plugin
+## ⚙️ Configuration Basics
 
-See [PLUGIN_DEVELOPMENT.md](./PLUGIN_DEVELOPMENT.md) for detailed guide.
+```yaml
+# config.yaml
+plugin: saluki                              # Model: saluki or xlnet
+outputpath: /path/to/results               # Output directory
+task: regression                            # regression or classification
 
-Quick overview:
-1. Create package with `pyproject.toml`
-2. Register entry point: `[project.entry-points."biolm.plugins"]`
-3. Implement model, dataset, and config
-4. Install and use: `poetry install && biolm fine-tune --model myplugin`
+data_source:
+  filepath: /path/to/data.txt              # Tab-separated data
+  idpos: 1                                  # ID column (1-indexed)
+  seqpos: 3                                 # Sequence column
+  labelpos: 2                               # Label column
+  splitratio: [70, 15, 15]                 # Train/val/test split
 
-Template available at: [plugin-template/](./plugin-template/)
-
-## 📖 Documentation
-
-- **[PLUGIN_DEVELOPMENT.md](./PLUGIN_DEVELOPMENT.md)** - Create custom plugins
-- **[PUBLISHING.md](./PUBLISHING.md)** - Release packages to PyPI
-- **[QUICKSTART.md](./QUICKSTART.md)** - Tutorial and examples
-- **[README_CONFIGS.md](./README_CONFIGS.md)** - Configuration reference
-
-## 🔧 Development
-
-### Running Tests
-
-```bash
-# Framework tests only
-poetry run pytest tests/ --ignore=tests/integration --ignore=tests/end_to_end
-
-# With plugins (integration tests)
-poetry install --with plugins
-poetry run pytest tests/integration/test_plugin_discovery.py
+training:
+  nepochs: 100                              # Number of epochs
+  batchsize: 8                              # Batch size
+  blocksize: 512                            # Max sequence length
 ```
 
-### Using Makefiles
+**📖 For complete reference, see [docs/CONFIGURATION.md](docs/CONFIGURATION.md)**
 
-Each plugin has a Makefile for common tasks:
+## 📚 Documentation
 
-```bash
-# In plugin directory
-make help           # Show available targets
-make install        # Install plugin
-make test           # Run plugin tests
-make verify-plugin  # Check entry point registration
-make bootstrap      # Full setup (framework + plugin)
-```
+| Document | Description |
+|----------|-------------|
+| **[Installation Guide](docs/INSTALLATION.md)** | Detailed setup, troubleshooting |
+| **[Configuration Reference](docs/CONFIGURATION.md)** | All parameters explained |
+| **[Plugin Development](docs/PLUGIN_DEVELOPMENT.md)** | Create custom plugins |
+| **[Publishing Guide](docs/PUBLISHING.md)** | Release to PyPI |
 
 ## 🏗️ Architecture
 
-### Entry Point System
+```
+biolm_utils/              # Framework (this repo)
+├── biolm/               # Core framework
+│   ├── plugins/         # Plugin loader
+│   └── examples/        # Config templates
+└── tests/               # Tests (67 passing)
 
-Plugins register themselves via Python entry points:
+rna_saluki_cnn/          # Saluki plugin (separate repo)
+├── saluki_plugin/       # Plugin code
+└── pyproject.toml       # Entry point registration
+
+rna_protein_xlnet/       # XLNet plugin (separate repo)
+├── xlnet_plugin/        # Plugin code
+└── pyproject.toml       # Entry point registration
+```
+
+### Plugin Discovery
+
+Plugins register via **Python entry points**:
 
 ```toml
-# In plugin's pyproject.toml
 [project.entry-points."biolm.plugins"]
-mymodel = "my_plugin.config:get_mymodel_config"
+mymodel = "my_plugin.config:get_config"
 ```
 
-Framework discovers plugins at runtime:
-```python
-import importlib.metadata
-plugins = importlib.metadata.entry_points(group='biolm.plugins')
-```
+Framework discovers them automatically at runtime—no hard dependencies!
 
-No hard-coded dependencies between framework and plugins!
+## 🧪 Testing
 
-### Version Compatibility
+```bash
+# Run all tests (67 tests)
+poetry run pytest tests/
 
-| Framework | Saluki | XLNet | Notes |
-|-----------|--------|-------|-------|
-| 0.0.3     | 0.1.0  | 0.1.0 | Current (biolm-2.0 branch) |
-| 0.1.0     | TBD    | TBD   | First stable release |
+# Specific suites
+poetry run pytest tests/integration/      # Plugin integration
+poetry run pytest tests/end_to_end/       # Full pipelines
 
-Plugins specify compatible framework versions in their `pyproject.toml`:
-```toml
-dependencies = [
-    "biolm>=0.0.3,<0.1.0",  # Semantic versioning
-]
+# With coverage
+poetry run pytest --cov=biolm --cov-report=html
 ```
 
 ## 🤝 Contributing
 
-### Framework Development
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push: `git push origin feature/amazing-feature`
+5. Open Pull Request
 
-1. Fork and clone `biolm_utils`
-2. Create feature branch: `git checkout -b feature/my-feature`
-3. Make changes and test: `poetry run pytest`
-4. Submit PR to `biolm-2.0` branch
+**Plugin development:** See [docs/PLUGIN_DEVELOPMENT.md](docs/PLUGIN_DEVELOPMENT.md)
 
-### Plugin Development
+## 📝 Citation
 
-Plugins are independent repositories. See existing plugins for examples:
-- [rna_saluki_cnn](https://github.com/dieterich-lab/rna_saluki_cnn)
-- [rna_protein_xlnet](https://github.com/dieterich-lab/rna_protein_xlnet)
+```bibtex
+@software{biolm2024,
+  title = {BioLM 2.0: A Modular Framework for Biological Language Models},
+  author = {Dieterich Lab},
+  year = {2024},
+  url = {https://github.com/dieterich-lab/biolm_utils}
+}
+```
 
-## 📜 License
+## 📄 License
 
-MIT License - see [LICENSE](./LICENSE) file
+MIT License - see [LICENSE](LICENSE) file
 
-## 🙏 Acknowledgments
+## 🆘 Support
 
-Developed by the Dieterich Lab for bioinformatics research.
+- **Issues:** [GitHub Issues](https://github.com/dieterich-lab/biolm_utils/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/dieterich-lab/biolm_utils/discussions)
 
-## 📞 Support
+## 🎯 What's New in 2.0
 
-- Issues: [GitHub Issues](https://github.com/dieterich-lab/biolm_utils/issues)
-- Discussions: [GitHub Discussions](https://github.com/dieterich-lab/biolm_utils/discussions)
-
+- ✅ **Plugin Architecture** - Models as separate packages
+- ✅ **Entry Point Discovery** - Automatic plugin loading  
+- ✅ **Independent Versioning** - Plugins released separately
+- ✅ **Clean Codebase** - Framework contains only core logic
+- ✅ **Comprehensive Testing** - 67 passing tests
+- ✅ **Modern Tooling** - Poetry, GitHub Actions, CI/CD
