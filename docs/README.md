@@ -9,6 +9,8 @@ Welcome to BioLM 2.0 documentation! This guide helps you find what you need quic
 | **[README.md](../README.md)** | Quick start, overview, basic usage | 👈 **START HERE** |
 | **[INSTALLATION.md](INSTALLATION.md)** | Detailed setup, troubleshooting | Installing for first time |
 | **[CONFIGURATION.md](CONFIGURATION.md)** | All parameters, examples | Configuring experiments |
+| **[TESTING.md](TESTING.md)** | Test suite guide, running tests | Understanding/running tests |
+| **[CI_CD.md](CI_CD.md)** | GitHub Actions workflows | Understanding CI/CD pipeline |
 | **[PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)** | Create custom plugins | Building your own model |
 | **[PUBLISHING.md](PUBLISHING.md)** | Release to PyPI | Publishing your plugin |
 
@@ -36,6 +38,12 @@ Welcome to BioLM 2.0 documentation! This guide helps you find what you need quic
 
 **...publish my plugin to PyPI**
 → [PUBLISHING.md](PUBLISHING.md)
+
+**...understand the test suite**
+→ [TESTING.md](TESTING.md) → See what each test does
+
+**...understand GitHub Actions workflows**
+→ [CI_CD.md](CI_CD.md) → Learn how automation works
 
 ## 📚 Learning Path
 

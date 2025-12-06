@@ -155,16 +155,19 @@ Framework discovers them automatically at runtime—no hard dependencies!
 ## 🧪 Testing
 
 ```bash
-# Run all tests (67 tests)
+# Run all tests (61 tests)
 poetry run pytest tests/
 
 # Specific suites
-poetry run pytest tests/integration/      # Plugin integration
-poetry run pytest tests/end_to_end/       # Full pipelines
+poetry run pytest tests/integration/      # Plugin system tests
+poetry run pytest tests/test_*.py         # Unit tests
 
 # With coverage
 poetry run pytest --cov=biolm --cov-report=html
 ```
+
+**📖 Detailed test documentation:** [docs/TESTING.md](docs/TESTING.md)  
+**📖 CI/CD workflows explained:** [docs/CI_CD.md](docs/CI_CD.md)
 
 ## 🤝 Contributing
 
@@ -202,5 +205,6 @@ MIT License - see [LICENSE](LICENSE) file
 - ✅ **Entry Point Discovery** - Automatic plugin loading  
 - ✅ **Independent Versioning** - Plugins released separately
 - ✅ **Clean Codebase** - Framework contains only core logic
-- ✅ **Comprehensive Testing** - 67 passing tests
+- ✅ **Comprehensive Testing** - 61 framework tests, plugin tests in plugin repos
 - ✅ **Modern Tooling** - Poetry, GitHub Actions, CI/CD
+- ✅ **Educational Documentation** - Complete guides for testing, CI/CD, plugins
