@@ -11,9 +11,13 @@ declarative control. The registry merges these into the framework's Config.
 
 from __future__ import annotations
 
+import importlib.metadata
+import logging
 from typing import Any, Callable, Dict, Optional
 
 from .config import Config, set_config
+
+logger = logging.getLogger(__name__)
 
 _REGISTRY: Dict[str, Callable[[], Dict[str, Any]]] = {}
 # Stack of applied plugin (name, config) to allow reverting to previous plugin
@@ -27,8 +31,29 @@ def register_plugin(name: str, factory: Callable[[], Dict[str, Any]]) -> None:
     The factory should return a config dict when called.
     """
     if name in _REGISTRY:
-        raise RuntimeError(f"Plugin '{name}' already registered")
+        logger.warning(f"Plugin '{name}' already registered, overwriting.")
     _REGISTRY[name] = factory
+
+
+def load_entry_points() -> None:
+    """Discover and register plugins from entry points.
+
+    Looks for entry points in the 'biolm.plugins' group.
+    """
+    # For Python 3.10+
+    if hasattr(importlib.metadata, 'entry_points'):
+        eps = importlib.metadata.entry_points(group='biolm.plugins')
+    else:
+        # Fallback for older python versions if needed, though project requires >=3.10
+        eps = importlib.metadata.entry_points().get('biolm.plugins', [])
+
+    for ep in eps:
+        try:
+            factory = ep.load()
+            register_plugin(ep.name, factory)
+            logger.info(f"Registered plugin '{ep.name}' from entry point")
+        except Exception as e:
+            logger.error(f"Failed to load plugin entry point '{ep.name}': {e}")
 
 
 def list_plugins() -> list[str]:
