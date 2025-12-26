@@ -19,30 +19,34 @@ A modular PyTorch framework for training language models on biological sequences
    ```
 
 2. **Install Plugins (Optional)**
-   Clone the plugins you need and run their installation scripts. They will automatically register themselves with the framework.
+   You can now install plugins directly using the `biolm` CLI:
 
    **For Saluki (RNA):**
    ```bash
-   cd ..
-   git clone https://github.com/dieterich-lab/rna_saluki_cnn.git
-   cd rna_saluki_cnn
-   git checkout saluki-2.0
-   ./install.sh
+   biolm install-plugin https://github.com/dieterich-lab/rna_saluki_cnn.git
    ```
 
    **For XLNet (Protein):**
    ```bash
-   cd ..
-   git clone https://github.com/dieterich-lab/rna_protein_xlnet.git
-   cd rna_protein_xlnet
-   git checkout xlnet-2.0
+   biolm install-plugin https://github.com/dieterich-lab/rna_protein_xlnet.git
+   ```
+
+   Alternatively, you can still clone and install manually:
+   ```bash
+   git clone https://github.com/dieterich-lab/rna_saluki_cnn.git
+   cd rna_saluki_cnn
    ./install.sh
    ```
 
 ### Verify Installation
 
+You can list installed plugins with:
 ```bash
-cd biolm_utils
+biolm list-plugins
+```
+
+Or manually check:
+```bash
 poetry run python -c "
 import importlib.metadata
 eps = importlib.metadata.entry_points(group='biolm.plugins')

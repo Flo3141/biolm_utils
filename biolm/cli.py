@@ -19,7 +19,7 @@ warnings.filterwarnings(
     config_name="config",
     version_base="1.1",
 )
-def parse_args(cfg: DictConfig):
+def _hydra_main(cfg: DictConfig):
     """Hydra CLI entrypoint — returns processed BioLMConfig."""
     # Set up logging early
     setup_logging()
@@ -98,6 +98,37 @@ def parse_args(cfg: DictConfig):
     from .biolm import main
 
     main()
+
+
+def parse_args():
+    import sys
+
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "plugin":
+            from .plugin_manager import handle_plugin_command
+
+            handle_plugin_command(sys.argv[2:])
+            return
+        elif sys.argv[1] == "install-plugin":
+            from .plugin_manager import handle_plugin_command
+
+            # Map 'install-plugin <url>' to 'plugin install <url>'
+            handle_plugin_command(["install"] + sys.argv[2:])
+            return
+        elif sys.argv[1] == "list-plugins":
+            from .plugin_manager import handle_plugin_command
+
+            # Map 'list-plugins' to 'plugin list'
+            handle_plugin_command(["list"] + sys.argv[2:])
+            return
+        elif sys.argv[1] == "remove-plugin":
+            from .plugin_manager import handle_plugin_command
+
+            # Map 'remove-plugin <name>' to 'plugin remove <name>'
+            handle_plugin_command(["remove"] + sys.argv[2:])
+            return
+
+    _hydra_main()
 
 
 if __name__ == "__main__":
