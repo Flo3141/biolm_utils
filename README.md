@@ -38,17 +38,6 @@ You can list installed plugins with:
 biolm list-plugins
 ```
 
-Or manually check:
-```bash
-poetry run python -c "
-import importlib.metadata
-eps = importlib.metadata.entry_points(group='biolm.plugins')
-print('✅ Available plugins:')
-for ep in eps:
-    print(f'  • {ep.name}')
-"
-```
-
 ### Run Your First Training
 
 ```bash
