@@ -69,20 +69,7 @@ verify_plugins() {
     
     cd "$SCRIPT_DIR"
     
-    poetry run python -c "
-import importlib.metadata
-
-eps = list(importlib.metadata.entry_points(group='biolm.plugins'))
-if eps:
-    print(f'Found {len(eps)} registered plugin(s):')
-    for ep in eps:
-        print(f'  ✓ {ep.name}')
-else:
-    print('No plugins installed yet.')
-    print('')
-    print('To install plugins, use the CLI:')
-    print('  poetry run biolm install-plugin <git-url>')
-" || true
+    poetry run biolm list-plugins || true
 }
 
 # Main installation flow

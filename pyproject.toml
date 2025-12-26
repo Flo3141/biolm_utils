@@ -18,6 +18,8 @@ dependencies = [
     "torchvision==0.18.1",
     "transformers==4.57.3",
     "mlflow>=3.6.0",
+    "rna-protein-xlnet @ file:///beegfs/prj/RNA_NLP/biolm_utils/plugins/rna_protein_xlnet",
+    "rna-saluki-cnn @ file:///beegfs/prj/RNA_NLP/biolm_utils/plugins/rna_saluki_cnn",
 ]
 
 [project.optional-dependencies]
@@ -62,6 +64,8 @@ torchaudio = "2.3.1"
 torchvision = "0.18.1"
 transformers = "4.57.3"
 mlflow = "^3.6.0"
+rna-protein-xlnet = {develop = true}
+rna-saluki-cnn = {develop = true}
 
 [tool.poetry.group.dev]
 optional = false

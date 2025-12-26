@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - mode: tokenize
+  - mode: ???
   - _self_
 
 # Core settings
@@ -18,9 +18,9 @@ data_source:
   columnsep: "\t"
   tokensep: ","
   specifiersep: null
-  idpos: 1
-  seqpos: 1
-  labelpos: 2
+  idpos: null
+  seqpos: null
+  labelpos: null
   crossvalidation: null
   splitratio: null
   splitpos: null
@@ -71,8 +71,8 @@ settings:
   # Optional MLflow integration (disabled by default). Enable for automatic
   # experiment tracking with metrics, parameters, and artifacts.
   mlflow:
-    enabled: false
-    tracking_uri: null  # null = local ./mlruns (default)
+    enabled: true
+    tracking_uri: "${outputpath}/mlruns"
     experiment_name: null  # null = auto-derived from outputpath
     log_artifacts: true
 
@@ -82,4 +82,13 @@ debugging:
   dev: false
   getdata: false
   forcenewdata: false
-  accelerator: cpu
+  accelerator: auto
+
+# Dynamic Hydra Configuration
+# This ensures logs go to outputpath/mode regardless of which mode is selected
+hydra:
+  run:
+    dir: ${outputpath}/${mode}
+  sweep:
+    dir: ${outputpath}/${mode}
+    subdir: .

@@ -85,7 +85,7 @@ class DebuggingConfig:
 @dataclass
 class BioLMConfig:
     # Core settings
-    mode: str = "fine-tune"
+    mode: str
     task: Optional[str] = None
     plugin: Optional[str] = None
     outputpath: Optional[Path] = None
