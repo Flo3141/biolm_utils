@@ -35,7 +35,10 @@ A modular PyTorch framework for training language models on biological sequences
    ```bash
    git clone https://github.com/dieterich-lab/rna_saluki_cnn.git
    cd rna_saluki_cnn
-   ./install.sh
+   
+   # Activate framework environment and install
+   source ../biolm_utils/.venv/bin/activate
+   pip install -e .
    ```
 
 ### Verify Installation
