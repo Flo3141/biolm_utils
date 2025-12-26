@@ -16,6 +16,7 @@ A modular PyTorch framework for training language models on biological sequences
    cd biolm_utils
    git checkout biolm-2.0
    ./install.sh
+   source .venv/bin/activate
    ```
 
 2. **Install Plugins (Optional)**
