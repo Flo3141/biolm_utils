@@ -31,14 +31,15 @@ A modular PyTorch framework for training language models on biological sequences
    biolm install-plugin https://github.com/dieterich-lab/rna_protein_xlnet.git
    ```
 
-   Alternatively, you can still clone and install manually:
+   Alternatively, you can still clone and install manually using Poetry:
    ```bash
+   # 1. Clone plugin
    git clone https://github.com/dieterich-lab/rna_saluki_cnn.git
    cd rna_saluki_cnn
    
-   # Activate framework environment and install
-   source ../biolm_utils/.venv/bin/activate
-   pip install -e .
+   # 2. Install into framework
+   cd ../biolm_utils
+   poetry add --editable ../rna_saluki_cnn
    ```
 
 ### Verify Installation
