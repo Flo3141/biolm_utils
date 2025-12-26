@@ -101,33 +101,33 @@ def _hydra_main(cfg: DictConfig):
 
 
 def parse_args():
+    """
+    Main entry point dispatcher.
+    
+    Routes commands to either:
+    1. The Plugin Manager (for 'install-plugin', 'list-plugins', etc.)
+    2. The Hydra Application (for 'train', 'tokenize', etc.)
+    """
     import sys
+    from .plugin_manager import handle_plugin_command
+
+    # Define management commands and their mapping to plugin_manager actions
+    # This acts as a router before Hydra takes over
+    MANAGEMENT_COMMANDS = {
+        "plugin": lambda args: handle_plugin_command(args),
+        "install-plugin": lambda args: handle_plugin_command(["install"] + args),
+        "list-plugins": lambda args: handle_plugin_command(["list"] + args),
+        "remove-plugin": lambda args: handle_plugin_command(["remove"] + args),
+    }
 
     if len(sys.argv) > 1:
-        if sys.argv[1] == "plugin":
-            from .plugin_manager import handle_plugin_command
-
-            handle_plugin_command(sys.argv[2:])
-            return
-        elif sys.argv[1] == "install-plugin":
-            from .plugin_manager import handle_plugin_command
-
-            # Map 'install-plugin <url>' to 'plugin install <url>'
-            handle_plugin_command(["install"] + sys.argv[2:])
-            return
-        elif sys.argv[1] == "list-plugins":
-            from .plugin_manager import handle_plugin_command
-
-            # Map 'list-plugins' to 'plugin list'
-            handle_plugin_command(["list"] + sys.argv[2:])
-            return
-        elif sys.argv[1] == "remove-plugin":
-            from .plugin_manager import handle_plugin_command
-
-            # Map 'remove-plugin <name>' to 'plugin remove <name>'
-            handle_plugin_command(["remove"] + sys.argv[2:])
+        command = sys.argv[1]
+        if command in MANAGEMENT_COMMANDS:
+            # Execute the mapped management command with remaining arguments
+            MANAGEMENT_COMMANDS[command](sys.argv[2:])
             return
 
+    # If not a management command, pass control to Hydra
     _hydra_main()
 
 
