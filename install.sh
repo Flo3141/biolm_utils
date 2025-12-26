@@ -140,11 +140,10 @@ main() {
     print_success "BioLM 2.0 framework is ready to use"
     echo ""
     print_info "Quick start:"
-    echo "  source .venv/bin/activate"
-    echo "  biolm --help"
+    echo "  poetry run biolm --help"
     echo ""
     print_info "To install plugins:"
-    echo "  biolm install-plugin <git-url>"
+    echo "  poetry run biolm install-plugin <git-url>"
     echo ""
 }
 

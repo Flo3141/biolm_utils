@@ -16,7 +16,6 @@ A modular PyTorch framework for training language models on biological sequences
    cd biolm_utils
    git checkout biolm-2.0
    ./install.sh
-   source .venv/bin/activate
    ```
 
 2. **Install Plugins (Optional)**
@@ -24,19 +23,19 @@ A modular PyTorch framework for training language models on biological sequences
 
    **For Saluki (RNA):**
    ```bash
-   biolm install-plugin https://github.com/dieterich-lab/rna_saluki_cnn.git
+   poetry run biolm install-plugin https://github.com/dieterich-lab/rna_saluki_cnn.git
    ```
 
    **For XLNet (Protein):**
    ```bash
-   biolm install-plugin https://github.com/dieterich-lab/rna_protein_xlnet.git
+   poetry run biolm install-plugin https://github.com/dieterich-lab/rna_protein_xlnet.git
    ```
 
 ### Verify Installation
 
 You can list installed plugins with:
 ```bash
-biolm list-plugins
+poetry run biolm list-plugins
 ```
 
 ### Run Your First Training
