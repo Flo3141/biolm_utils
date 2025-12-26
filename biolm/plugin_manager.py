@@ -45,9 +45,7 @@ def install_plugin(url: str, target_dir: str = "plugins"):
 
         if use_poetry:
             print("Detected Poetry project. Installing via 'poetry add'...")
-            subprocess.check_call(
-                ["poetry", "add", "--editable", f"./{plugin_path}"]
-            )
+            subprocess.check_call(["poetry", "add", "--editable", f"./{plugin_path}"])
         else:
             # Use the current executable to ensure we install into the same environment
             subprocess.check_call(

@@ -80,9 +80,8 @@ if eps:
 else:
     print('No plugins installed yet.')
     print('')
-    print('To install plugins, run their installation scripts:')
-    print('  cd /path/to/plugin')
-    print('  ./install.sh')
+    print('To install plugins, use the CLI:')
+    print('  poetry run biolm install-plugin <git-url>')
 " || true
 }
 

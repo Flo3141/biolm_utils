@@ -78,12 +78,6 @@ optional = true
 [tool.poetry.group.mlflow.dependencies]
 mlflow = ">=2.0.0"
 
-[tool.poetry.group.plugins]
-optional = true
-
-[tool.poetry.group.plugins.dependencies]
-rna-saluki-cnn = {path = "/home/pwiesenbach/rna_saluki_cnn", develop = true}
-rna-protein-xlnet = {path = "/home/pwiesenbach/rna_protein_xlnet", develop = true}
 
 [tool.poetry.extras]
 mlflow = ["mlflow"]
