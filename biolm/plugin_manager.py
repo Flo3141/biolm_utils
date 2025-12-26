@@ -30,10 +30,29 @@ def install_plugin(url: str, target_dir: str = "plugins"):
 
     print(f"Installing {repo_name} in editable mode...")
     try:
-        # Use the current executable to ensure we install into the same environment
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "-e", str(plugin_path)]
-        )
+        # Check if we are in a poetry project
+        use_poetry = False
+        if Path("pyproject.toml").exists():
+            try:
+                subprocess.check_call(
+                    ["poetry", "--version"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                use_poetry = True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                pass
+
+        if use_poetry:
+            print("Detected Poetry project. Installing via 'poetry add'...")
+            subprocess.check_call(
+                ["poetry", "add", "--editable", f"./{plugin_path}"]
+            )
+        else:
+            # Use the current executable to ensure we install into the same environment
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "-e", str(plugin_path)]
+            )
         print(f"Successfully installed {repo_name}.")
     except subprocess.CalledProcessError as e:
         print(f"Error installing plugin: {e}")
