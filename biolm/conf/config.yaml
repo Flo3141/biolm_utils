@@ -62,11 +62,6 @@ inference:
 # Data pre-processing options (kept under settings for plugin-level controls)
 settings:
   data_pre_processing:
-    centertoken: false
-    only512: false
-    _3utr: false
-    non3utr: false
-    nomarkers: false
     weightpos: null
   # Optional MLflow integration (disabled by default). Enable for automatic
   # experiment tracking with metrics, parameters, and artifacts.

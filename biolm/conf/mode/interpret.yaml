@@ -6,5 +6,4 @@ inference:
   looscores:
     handletokens: mask
 settings:
-  data_pre_processing:
-    centertoken: null
+  data_pre_processing: {}

@@ -79,13 +79,6 @@ class RNABaseDataset(Dataset):
         # Expose frequently-used config options on the instance for use in
         # helper methods (backwards compatible with legacy flat top-level attributes).
         self.encoding = encoding
-        self.centertoken = settings_get(
-            "centertoken", getattr(args, "centertoken", None)
-        )
-        self.only512 = settings_get("only512", getattr(args, "only512", False))
-        self._3utr = settings_get("_3utr", getattr(args, "_3utr", False))
-        self.non3utr = settings_get("non3utr", getattr(args, "non3utr", False))
-        self.nomarkers = settings_get("nomarkers", getattr(args, "nomarkers", False))
 
         # Normalize and pre-trokenize to obtain the sequences.
         normalized_seqs = [
@@ -202,23 +195,6 @@ class RNABaseDataset(Dataset):
         ]
         self.tokenized_seqs = [[x for x in y if x != ""] for y in self.tokenized_seqs]
 
-        # Possible cds-centering.
-        if self.centertoken:
-            # XXX Check this if that still also holds for k-mers.
-            self.seqs = self.get_centered_lines()
-
-        # These two options are actively filtering sequences out and also alter `self.lines`.
-        if self.only512:
-            self.seqs = self.get_only512()
-        if self._3utr:
-            self.seqs = self.get_3utr()
-
-        if self.non3utr:
-            self.seqs = self.get_non3utr()
-
-        if self.nomarkers:
-            self.seqs = self.get_nomarkers()
-
         encodings = self.tokenizer(
             self.seqs,
             add_special_tokens=add_special_tokens,
@@ -289,65 +265,6 @@ class RNABaseDataset(Dataset):
 
     def __len__(self):
         return len(self.examples)
-
-    def get_centered_lines(self):
-        centered_lines = list()
-        for line in self.tokenized_seqs:
-            if len(line) > self.tokenizer.model_max_length:
-                cds_pos = [i for i, x in enumerate(line) if self.centertoken in x]
-                if cds_pos:
-                    cds_pos = cds_pos[0]
-                    middle = (self.tokenizer.model_max_length - 2) // 2
-                    if cds_pos >= middle:
-                        rest_right = max(0, middle - (len(line) - cds_pos))
-                        line = line[max(0, cds_pos - middle - rest_right) :]
-            centered_lines.append(line)
-            if self.encoding not in ["3mer", "5mer"]:
-                centered_lines[-1] = self.join_str.join(centered_lines[-1])
-        return centered_lines
-
-    def get_only512(self):
-        lines = list()
-        raw_lines = list()
-        for line, raw_line in zip(self.tokenized_seqs, self.lines):
-            if len(line) <= self.tokenizer.model_max_length:
-                lines.append("".join(line))
-                raw_lines.append(raw_line)
-        self.lines = raw_lines
-        return lines
-
-    def get_3utr(self):
-        lines = list()
-        raw_lines = list()
-        for line, raw_line in zip(self.normalized_lines, self.lines):
-            cds_pos = [i for i, x in enumerate(line) if x == "e"]
-            if not cds_pos:
-                continue
-            cds_pos = cds_pos[0]
-            line = line[cds_pos + 1 :]
-            lines.append(line)
-            raw_lines.append(raw_line)
-        self.lines = raw_lines
-        return lines
-
-    def get_non3utr(self):
-        _lines = list()
-        for line in self.normalized_lines:
-            cds_pos = [i for i, x in enumerate(line) if x == "e"]
-            if not cds_pos:
-                _lines.append(line)
-                continue
-            cds_pos = cds_pos[0]
-            line = line[:cds_pos]
-            _lines.append(line)
-        return _lines
-
-    def get_nomarkers(self):
-        _lines = list()
-        for line in self.normalized_lines:
-            line = re.sub("s|e|x", "", line)
-            _lines.append(line)
-        return _lines
 
     def log_raw_data(self):
         raw_data_df = pd.DataFrame()
