@@ -104,18 +104,14 @@ main() {
                 echo "Installs the BioLM 2.0 framework."
                 echo ""
                 echo "To install plugins after installing the framework:"
-                echo "  cd /path/to/plugin"
-                echo "  ./install.sh"
+                echo "  poetry run biolm install-plugin <git-url>"
                 echo ""
                 echo "Example:"
                 echo "  # Install framework"
                 echo "  cd biolm_utils && ./install.sh"
                 echo ""
                 echo "  # Install Saluki plugin"
-                echo "  cd rna_saluki_cnn && ./install.sh"
-                echo ""
-                echo "  # Install XLNet plugin"
-                echo "  cd rna_protein_xlnet && ./install.sh"
+                echo "  poetry run biolm install-plugin https://github.com/dieterich-lab/rna_saluki_cnn.git"
                 exit 0
                 ;;
             *)
