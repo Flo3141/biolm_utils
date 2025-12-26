@@ -103,12 +103,13 @@ def _hydra_main(cfg: DictConfig):
 def parse_args():
     """
     Main entry point dispatcher.
-    
+
     Routes commands to either:
     1. The Plugin Manager (for 'install-plugin', 'list-plugins', etc.)
     2. The Hydra Application (for 'train', 'tokenize', etc.)
     """
     import sys
+
     from .plugin_manager import handle_plugin_command
 
     # Define management commands and their mapping to plugin_manager actions
@@ -119,6 +120,20 @@ def parse_args():
         "list-plugins": lambda args: handle_plugin_command(["list"] + args),
         "remove-plugin": lambda args: handle_plugin_command(["remove"] + args),
     }
+
+    # Intercept help to show management commands
+    if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h"]:
+        print("BioLM Framework CLI")
+        print("===================")
+        print("\nManagement Commands:")
+        print("  install-plugin <url>   Install a plugin from a Git URL")
+        print("  list-plugins           List installed plugins")
+        print("  remove-plugin <name>   Uninstall a plugin")
+        print("  plugin <command>       Access advanced plugin management")
+        print("\n" + "-" * 20 + "\n")
+        # Continue to Hydra to show configuration help
+        _hydra_main()
+        return
 
     if len(sys.argv) > 1:
         command = sys.argv[1]
