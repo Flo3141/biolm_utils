@@ -62,7 +62,7 @@ def make_subsets(
 
 def check_batchsize(ds, batchsize: int, name: str):
     """Raise if dataset is smaller than batch size (basic sanity check)."""
-    if ds is not None and len(ds) < batchsize:
+    if ds is not None and len(ds) > 0 and len(ds) < batchsize:
         raise ValueError(
             f"Size of the {name} dataset ({len(ds)}) is smaller than the batch size {batchsize}; lower the batch size."
         )

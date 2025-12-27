@@ -130,7 +130,6 @@ def _build_training_args(model_save_path, val_dataset, config, train_dataset):
         save_strategy=save_strategy,
         logging_strategy="steps",
         logging_steps=logging_steps,
-        # logging_strategy="steps" if is_pre_train else "epoch",
         disable_tqdm=True,
         log_level="info",
         warmup_ratio=0.05 if is_pre_train else 0.0,
@@ -271,15 +270,12 @@ def train(
         trainer.state.num_train_epochs += num_epochs_trained
 
     model.scaling_method = getattr(args, "scaling", "identity")  # Save scaling method
+    model.config.scaling_method = model.scaling_method  # Save in config
 
     # Save the model with scaling metadata
     trainer.save_model()
     tokenizer.save_pretrained(model_save_path)
     trainer.save_state()
-
-    # Save scaling metadata explicitly
-    with open(model_save_path / "scaling_metadata.json", "w") as f:
-        json.dump({"scaling_method": model.scaling_method}, f)
 
     train_metrics = train_result.metrics
     train_metrics["train_samples"] = len(train_dataset)
@@ -293,9 +289,6 @@ def train(
 
     eval_metrics = {}
     if args.mode != "pre-train":
-        with open(model_save_path / "scaler.pkl", "wb") as f:
-            pickle.dump(model.scaler, f)
-
         eval_metrics = trainer.evaluate()
         eval_metrics["eval_samples"] = len(val_dataset)
         trainer.log_metrics("eval", eval_metrics)
@@ -338,6 +331,13 @@ def test(
             pretraining_required=config.pretraining_required,
             scaler=None,
         )
+    # Set scaler and scaling_method from the dataset
+    if hasattr(full_dataset, "scaler") and full_dataset.scaler is not None:
+        model.scaler = full_dataset.scaler
+    if hasattr(full_dataset, "scaling_method"):
+        model.scaling_method = full_dataset.scaling_method
+    if hasattr(model, "scaling_method") and model.scaling_method:
+        logging.info(f"Model uses scaling method: {model.scaling_method}")
 
     test_args = _build_test_args(model_load_path, test_dataset)
     compute_metrics = constants["METRIC"](full_dataset, model_load_path)

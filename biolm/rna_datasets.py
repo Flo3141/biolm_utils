@@ -22,8 +22,12 @@ class RNABaseDataset(Dataset):
         scaler=None,  # Add scaler as an optional parameter
     ):
         self.tokenizer = tokenizer
+
         self.args = args
         self.scaler = scaler  # Store the scaler in the dataset
+        self.scaling_method = getattr(
+            args, "scaling", "identity"
+        )  # Store scaling method
         # Prepare helpers and resolved attributes for structured config
         data_source = getattr(args, "data_source", None)
         tokenization = getattr(args, "tokenization", None)
@@ -204,7 +208,51 @@ class RNABaseDataset(Dataset):
         )["input_ids"]
         logging.info("Encoding sequences finished.")
 
-        self.examples = np.array([{"input_ids": e} for e in encodings])
+        # Use the tokenizer's `model_max_length` for padding/truncation.
+        # Prefer the tokenizer attribute; if absent, fall back to the
+        # training.blocksize in the config (still safe and minimal).
+        # The plugin is responsible for setting this invariant (Saluki sets
+        # it to 12288). If neither is set, raise a clear error.
+        max_len = getattr(self.tokenizer, "model_max_length", None)
+        if max_len is None:
+            max_len = getattr(
+                getattr(self.args, "training", None),
+                "blocksize",
+                getattr(self.args, "blocksize", None),
+            )
+            if max_len is None:
+                raise ValueError(
+                    "tokenizer.model_max_length is not set and args.training.blocksize is not set. Plugin must set a blocksize (e.g. Saluki requires 12288)."
+                )
+            else:
+                logging.warning(
+                    "tokenizer.model_max_length unset — using args.training.blocksize=%s",
+                    max_len,
+                )
+
+        pad_id = int(self.tokenizer.pad_token_id)
+        padded_encodings = []
+        # Ensure max_len is a native Python int to avoid numpy pad type issues
+        try:
+            max_len = int(max_len)
+        except Exception:
+            raise ValueError("tokenizer.model_max_length must be an integer")
+
+        for e in encodings:
+            # convert to numpy array for safe padding/truncation
+            arr = np.asarray(e, dtype=np.int64)
+            cur_len = int(arr.shape[0])
+            need = max_len - cur_len
+            if need > 0:
+                # Create a new array filled with pad_id and copy existing values.
+                new = np.full((max_len,), int(pad_id), dtype=np.int64)
+                new[:cur_len] = arr
+                arr = new
+            elif need < 0:
+                arr = arr[:max_len]
+            padded_encodings.append(arr.tolist())
+
+        self.examples = np.array([{"input_ids": e} for e in padded_encodings])
 
         # TODO: Make this a model attribute
         # Set up the scaler
@@ -363,6 +411,7 @@ class RNABaseDataset(Dataset):
         data = {
             "lines": self.lines,
             "scaler": self.scaler,  # Save the scaler
+            "scaling_method": self.scaling_method,  # Save scaling method
         }
         with open(filepath, "wb") as f:
             pickle.dump(data, f)
@@ -379,4 +428,7 @@ class RNABaseDataset(Dataset):
             scaler=data.get("scaler"),  # Load the scaler
         )
         dataset.lines = data["lines"]
+        dataset.scaling_method = data.get(
+            "scaling_method", "identity"
+        )  # Load scaling method
         return dataset

@@ -152,8 +152,10 @@ def get_tokenizer(args, tokenizer_file, tokenizer_cls, pretraining_required):
 
     # if args.pretrainedmodel or (args.mode == "fine-tune" and pretraining_required):
     if mode == "fine-tune" and pretraining_required:
-        tokenizer_config_file = tokenizer_file / "pre-train" / "tokenizer_config.json"
-        tokenizer_file = tokenizer_file / "pre-train" / "tokenizer.json"
+        tokenizer_config_file = (
+            tokenizer_file.parent / "pre-train" / "tokenizer_config.json"
+        )
+        tokenizer_file = tokenizer_file.parent / "pre-train" / "tokenizer.json"
         # else:
         #     tokenizer_config_file = tokenizer_file.parent / "tokenizer_config.json"
         with open(
@@ -239,6 +241,12 @@ def get_tokenizer(args, tokenizer_file, tokenizer_cls, pretraining_required):
 
         # Load from HuggingFace format directory
         tokenizer_dir = tokenizer_file
+        if (
+            not tokenizer_dir.exists()
+            or not (tokenizer_dir / "tokenizer_config.json").exists()
+        ):
+            tokenizer_dir = tokenizer_file.parent
+            logger.info(f"Falling back to loading tokenizer from {tokenizer_dir}")
         tokenizer_kwargs = {
             "model_max_length": blocksize,
             "truncation": True,
@@ -300,69 +308,21 @@ def get_tokenizer(args, tokenizer_file, tokenizer_cls, pretraining_required):
 
 
 def get_dataset(args, tokenizer, add_special_tokens, dataset_file, dataset_cls):
-    metadata_file = dataset_file.with_suffix(".metadata.json")
     current_blocksize = getattr(getattr(args, "training", None), "blocksize", None)
-    tokenization = args.tokenization or TokenizationConfig()
-    current_vocabsize = getattr(tokenization, "vocabsize", None)
-    current_encoding = getattr(tokenization, "encoding", None)
-    current_minfreq = getattr(tokenization, "minfreq", None)
-    current_filepath = getattr(getattr(args, "data_source", None), "filepath", None)
-
-    recreate = False
     if dataset_file.exists():
-        if metadata_file.exists():
-            with open(metadata_file, "r") as f:
-                metadata = json.load(f)
-            changed_params = []
-            if metadata.get("blocksize") != current_blocksize:
-                changed_params.append(
-                    f"blocksize: {metadata.get('blocksize')} -> {current_blocksize}"
-                )
-            if metadata.get("vocabsize") != current_vocabsize:
-                changed_params.append(
-                    f"vocabsize: {metadata.get('vocabsize')} -> {current_vocabsize}"
-                )
-            if metadata.get("encoding") != current_encoding:
-                changed_params.append(
-                    f"encoding: {metadata.get('encoding')} -> {current_encoding}"
-                )
-            if metadata.get("minfreq") != current_minfreq:
-                changed_params.append(
-                    f"minfreq: {metadata.get('minfreq')} -> {current_minfreq}"
-                )
-            if str(metadata.get("filepath")) != str(current_filepath):
-                changed_params.append(
-                    f"filepath: {metadata.get('filepath')} -> {current_filepath}"
-                )
-            if changed_params:
-                logger.warning(
-                    f"Dataset parameters changed, recreating dataset. Changed: {', '.join(changed_params)}"
-                )
-                recreate = True
-        else:
+        logger.info(f"Loading dataset from {dataset_file}")
+        with open(dataset_file, "rb") as f:
+            dataset = pickle.load(f)
+        logger.info(f"First sample length: {len(dataset[0]['input_ids'])}")
+        if (
+            current_blocksize is not None
+            and len(dataset[0]["input_ids"]) != current_blocksize
+        ):
             logger.warning(
-                "No metadata found for dataset, recreating to ensure compatibility"
+                f"Dataset blocksize mismatch ({len(dataset[0]['input_ids'])} vs {current_blocksize}), recreating dataset"
             )
-            recreate = True
-
-    # Log current dataset parameters
-    logger.info(
-        f"Dataset parameters: blocksize={current_blocksize}, vocabsize={current_vocabsize}, "
-        f"encoding={current_encoding}, minfreq={current_minfreq}, filepath={current_filepath}"
-    )
-
-    if recreate:
-        dataset_file.unlink(missing_ok=True)
-        metadata_file.unlink(missing_ok=True)
-    else:
-        if not dataset_file.exists():
-            logger.warning(f"Dataset file {dataset_file} disappeared, recreating")
-            recreate = True
+            dataset_file.unlink(missing_ok=True)
         else:
-            logger.info(f"Loading dataset from {dataset_file}")
-            with open(dataset_file, "rb") as f:
-                dataset = pickle.load(f)
-            logger.info(f"First sample length: {len(dataset[0]['input_ids'])}")
             tokenizer = dataset.tokenizer
             return dataset
 
@@ -377,12 +337,9 @@ def get_dataset(args, tokenizer, add_special_tokens, dataset_file, dataset_cls):
         with open(dataset_file, "wb") as f:
             pickle.dump(dataset, f)
         # Save metadata
+        metadata_file = dataset_file.with_suffix(".metadata.json")
         metadata = {
-            "blocksize": current_blocksize,
-            "vocabsize": current_vocabsize,
-            "encoding": current_encoding,
-            "minfreq": current_minfreq,
-            "filepath": str(current_filepath),
+            "scaling_method": dataset.scaling_method,
         }
         with open(metadata_file, "w") as f:
             json.dump(metadata, f)
@@ -634,10 +591,11 @@ def get_model_and_config(
             f"Loaded {model_cls} model with weights from {model_load_path} saved on "
             f"{datetime.fromtimestamp(model_load_path.stat().st_ctime)} with {n_epochs} epochs trained."
         )
+        model.scaling_method = getattr(model.config, "scaling_method", None)
     if args.mode != "pre-train":
         if scaler is not None:
             model.scaler = scaler
         else:
-            with open(Path(model_load_path) / "scaler.pkl", "rb") as scaler_file:
-                model.scaler = pickle.load(scaler_file)
+            # For predict/interpret, scaler should be loaded from dataset
+            pass
     return model

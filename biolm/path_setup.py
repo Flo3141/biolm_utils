@@ -37,9 +37,9 @@ def _adjust_paths_for_pretrained_model(
     if args.inference and args.inference.pretrainedmodel:
         pretrained_path = Path(args.inference.pretrainedmodel)
         if args.mode != "pre-train":
-            return pretrained_path, pretrained_path / "tokenizer.json"
+            return pretrained_path, pretrained_path / "tokenize"
         else:
-            return modelloadpath, pretrained_path / "tokenizer.json"
+            return modelloadpath, pretrained_path / "tokenize"
     return modelloadpath, tokenizerfile
 
 
@@ -51,7 +51,7 @@ def setup_paths() -> Dict[str, Optional[Path]]:
     outputpath.mkdir(parents=True, exist_ok=True)
 
     tokenizerfile = (
-        outputpath.resolve()
+        outputpath / "tokenize"
     )  # Directory containing tokenizer files (HuggingFace format)
     modelloadpath = _get_model_load_path(args, outputpath)
     modelloadpath, tokenizerfile = _adjust_paths_for_pretrained_model(
