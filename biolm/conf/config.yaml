@@ -87,3 +87,5 @@ hydra:
   sweep:
     dir: ${outputpath}/${mode}
     subdir: .
+  job:
+    name: null  # Disable Hydra's default cli.log creation

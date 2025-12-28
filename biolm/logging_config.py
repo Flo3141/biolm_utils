@@ -57,6 +57,18 @@ def setup_logging(log_file=None):
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
 
+        # Check if the log file remains empty and remove it
+        import os
+
+        def remove_empty_log_file():
+            if os.path.exists(log_file) and os.path.getsize(log_file) == 0:
+                os.remove(log_file)
+
+        # Schedule removal of empty log file at program exit
+        import atexit
+
+        atexit.register(remove_empty_log_file)
+
     # Redirect stdout to the log file if specified
     if log_file:
 

@@ -4,125 +4,119 @@ A modular PyTorch framework for training language models on biological sequences
 
 ## Table of contents
 
-- Quick Start
+
+# BioLM 2.0 Framework
+
+A modular, plugin-based PyTorch framework for training language models on biological sequences (RNA/protein). Model implementations are provided as external plugins.
+
+---
+
+## Table of Contents
+
 - Installation
-- Plugins (installation)
-- Verify Installation
-- Run Your First Training
+- Adding Plugins
 - Data Format
-- Usage (pipeline)
-- Configuration Management (Hydra)
-- Plugin Discovery
-- Testing
-- Contributing
-- Full Documentation (merged)
+- Modes Overview
+- Usage
+- Available Plugins
+- Configuration Management
 
+---
 
-## 🎯 Quick Start
+## 🚀 Installation
 
-### Prerequisites
-
+**Requirements:**
 - Python 3.10+
 - Poetry ([install guide](https://python-poetry.org/docs/#installation))
 
-### Installation
-
-1. **Install Framework**
-
-  ```bash
-  git clone https://github.com/dieterich-lab/biolm_utils.git
-  cd biolm_utils
-  git checkout biolm-2.0
-  ./install.sh
-  ```
-
-1. **Plugins (External packages)**
-
-  The framework is intentionally "bare": models and model-specific code live in separate plugin packages. Plugins are not bundled with the framework and must be installed separately by users who need them.
-
-  The framework is intentionally "bare": model implementations are distributed as separate plugin packages and must be installed when you need them.
-
-  Canonical plugin installation (required)
-
-  Use only the framework CLI helper to install plugins. This wrapper standardizes installation, verifies the package exposes the required entry point, and runs a lightweight verification after installation:
-
-  ```bash
-  poetry run biolm install-plugin <path-or-git-url>
-  ```
-
-  The helper will:
-
-- Install the plugin package into your current environment (uses Poetry when available, falls back to pip).
-- Verify the package exposes a `biolm.plugins` entry point and that the entry-point target is importable.
-- Run a small verification step; on failure it will report the error and will not leave a partially-installed plugin.
-
-  After installing, confirm the plugin is visible with:
-
-  ```bash
-  poetry run biolm list-plugins
-  ```
-
-### Verify Installation
-
-You can list discovered/registered plugins with:
-
+**Framework:**
 ```bash
+git clone https://github.com/dieterich-lab/biolm_utils.git
+cd biolm_utils
+git checkout biolm-2.0
+./install.sh
+```
+
+**Add Plugins:**
+Plugins are not bundled. Install them using the CLI:
+```bash
+poetry run biolm install-plugin <path-or-git-url>
 poetry run biolm list-plugins
 ```
 
-### Run Your First Training
-
-```bash
-# Copy a minimal config template to a working directory
-cp -r biolm/examples/plugin_template my_experiment
-
-# Edit my_experiment/config.yaml to point at your data and output path
-#   - set `outputpath: /path/to/results`
-#   - set `data_source.filepath: /path/to/data.txt`
-
-# Run fine-tuning
-poetry run biolm fine-tune --config-path ./my_experiment
-```
-
-**📖 See Installation Guide below**
+---
 
 ## 📊 Data Format
 
-Your input file should be **tab-separated**:
+Input files must be **tab-separated**:
 
 ```
 ID          Label    Sequence
 seq_001     1.5      a,t,g,c,a,g,t,c,...
 seq_002     2.3      a,t,g,c,a,g,t,c,...
 ```
+*Column positions are 1-indexed (1, 2, 3...)*
 
-**Important:** Column positions are **1-indexed** (1, 2, 3...).
+---
 
-## 🚀 Usage
+## ⚡ Modes Overview
 
-### Training Pipeline
+| Mode         | Description                                                                 | Typical Use/Plugin         |
+|--------------|-----------------------------------------------------------------------------|---------------------------|
+| tokenize     | Build vocabulary/tokenizer from data.                                       | All models                |
+| pre-train    | (Optional) Pre-train language model on unlabeled data.                      | Required for LMs (XLNet)  |
+| fine-tune    | Train model on labeled data for your task.                                  | All models                |
+| predict      | Run inference/prediction on new data.                                       | All models                |
+| interpret    | Feature importance/interpretation (e.g., saliency, attention, etc.).        | All models                |
 
+**Note:**
+- Language models (e.g., XLNet) require pre-training before fine-tuning.
+- CNN-based models (e.g., Saluki) do **not** require pre-training.
+- `interpret` mode provides model-specific feature importance or explanation outputs.
+
+---
+
+## 🛠️ Usage
+
+Run any mode with:
 ```bash
-# Step 1: Tokenize (builds vocabulary)
-poetry run biolm tokenize --config-path ./my_experiment
-
-# Step 2: Pre-train (optional; model-dependent)
-poetry run biolm pre-train --config-path ./my_experiment
-
-# Step 3: Fine-tune on your task
-poetry run biolm fine-tune --config-path ./my_experiment
-
-# Step 4: Make predictions
-poetry run biolm predict --config-path ./my_experiment
-
-# Step 5: Interpret (feature importance)
-poetry run biolm interpret --config-path ./my_experiment
+poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --config-path ./my_experiment
 ```
 
-### Available Plugins
+---
+
+## 🔌 Available Plugins
 
 | Plugin | Model | Sequences | Pre-training | Use Case |
 |--------|-------|-----------|--------------|----------|
+| [rna_protein_xlnet](https://github.com/dieterich-lab/rna_protein_xlnet) | XLNet | RNA/Protein | Yes | General sequence analysis and prediction |
+| [rna_saluki_cnn](https://github.com/dieterich-lab/rna_saluki_cnn) | CNN | RNA | No | m6A modification site prediction |
+
+Plugins are external packages. Install and register plugins as shown above.
+
+---
+
+## ⚙️ Configuration Management
+
+BioLM uses Hydra for flexible configuration. Compose configs from multiple files and override values at runtime:
+
+```bash
+poetry run biolm fine-tune --config-path ./my_experiment training.nepochs=50
+| [rna_saluki_cnn](https://github.com/dieterich-lab/rna_saluki_cnn) | CNN | RNA | No | m6A modification site prediction |
+```
+
+See the config files in each plugin for available options and documentation.
+
+---
+
+## 🤝 Contributing & Support
+
+Contributions, bug reports, and plugin submissions are welcome! See the repository issues and discussions for help.
+
+---
+
+*BioLM is developed and maintained by the Dieterich Lab. For more information, see the plugin repositories or contact the maintainers.*
+
 Plugins are external packages; the framework itself does not bundle any model implementations. Install and register plugins separately (see above).
 
 ## ⚙️ Configuration Management with Hydra
@@ -330,88 +324,6 @@ MIT License - see [LICENSE](LICENSE) file
 ## Full Documentation (merged from docs/)
 
 The following sections contain the complete documentation previously stored in `docs/`. They are provided here to keep the repository self-contained. If you maintain copies elsewhere, keep them in sync.
-
----
-
-<!-- INSTALLATION.md -->
-
-### Installation Guide
-
-Complete installation instructions for BioLM 2.0 framework and plugins.
-
-Prerequisites
-
-- Python 3.10+
-- Poetry
-- Git
-
-Quick Installation (Recommended)
-
-Install the framework (recommended method):
-
-```bash
-git clone https://github.com/dieterich-lab/biolm_utils.git
-cd biolm_utils
-./install.sh
-```
-
-The `install.sh` script installs framework dependencies and runs optional verifications. Plugin installation is intentionally performed separately using the framework CLI helper (see below).
-
-Manual Installation
-
-Option 1: Framework Only
-
-```bash
-cd biolm_utils
-poetry install
-```
-
-Plugin installation (manual methods deprecated)
-
-Installing plugins via manual `poetry add` or by running `poetry install` inside plugin repositories is no longer recommended. Use the CLI helper described above to ensure consistent installation and verification.
-
-Installation Script Details
-
-The `install.sh` script supports several options (see script for exact flags in repo):
-
-```bash
-./install.sh [OPTIONS]
-
-Options:
-  --skip-tests            Skip post-installation tests
-  --help                  Show help message
-```
-
-Verification
-
-Check Framework Installation
-
-```bash
-cd biolm_utils
-poetry run python -c "import biolm; print('BioLM import OK')"
-```
-
-Check Plugin Discovery
-
-```bash
-poetry run python -c "
-import importlib.metadata
-print('Registered plugins:')
-eps = importlib.metadata.entry_points(group='biolm.plugins')
-for ep in eps:
-    print(f'  • {ep.name}')
-"
-```
-
-Run Tests
-
-```bash
-# Framework tests only
-poetry run pytest tests/ --ignore=tests/integration --ignore=tests/end_to_end
-
-# With plugins (integration + end-to-end)
-poetry run pytest tests/
-```
 
 ---
 
