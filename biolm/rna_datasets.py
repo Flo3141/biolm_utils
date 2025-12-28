@@ -254,8 +254,6 @@ class RNABaseDataset(Dataset):
 
         self.examples = np.array([{"input_ids": e} for e in padded_encodings])
 
-        # TODO: Make this a model attribute
-        # Set up the scaler
         scaling = getattr(
             getattr(args, "training", None), "scaling", getattr(args, "scaling", None)
         )
@@ -266,7 +264,6 @@ class RNABaseDataset(Dataset):
         elif scaling == "log":
             self.scaler = LogScaler()
         else:
-            # Not so pretty, but is currently the fastest adaptation for no scaling
             self.scaler = IdentityScaler()
 
         # get the labels and seq idx for each task.
