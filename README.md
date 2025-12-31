@@ -13,6 +13,8 @@ A modular PyTorch framework for training language models on biological sequences
 - [Usage](#usage)
 - [Available Plugins](#available-plugins)
 - [Configuration Management](#configuration-management)
+- [Output Directory Structure](#output-directory-structure)
+- [MLflow Tracking](#mlflow-tracking)
 - [Testing](#testing)
 - [Contributing](#contributing)
 - [Citation](#citation)
@@ -44,14 +46,13 @@ poetry run biolm list-plugins
 
 ## 📊 Data Format
 
-Input files must be **tab-separated**:
+Input files must specify the delimiter using the `data_source.columnsep` configuration. By default, the delimiter is set to tab (`\t`). Example:
 
 ```
 ID          Label    Sequence
 seq_001     1.5      a,t,g,c,a,g,t,c,...
 seq_002     2.3      a,t,g,c,a,g,t,c,...
 ```
-*Column positions are 1-indexed (1, 2, 3...)*
 
 ---
 
@@ -111,6 +112,15 @@ biolm/conf
 │   ├── predict.yaml     # Prediction-specific settings
 │   └── interpret.yaml   # Interpretation-specific settings
 ```
+
+### Important Configuration Settings
+
+- **`data_source.columnsep`**: Specifies the delimiter for input files (default: `\t`).
+- **`data_source.splitratio`**: Defines the train/validation/test split ratios.
+- **`training.nepochs`**: Number of training epochs (default: 100).
+- **`training.batchsize`**: Batch size for training (default: 8).
+- **`mlflow.enabled`**: Enables MLflow tracking (default: `true`).
+- **`mlflow.tracking_uri`**: Directory for MLflow logs (default: `${outputpath}/mlruns`).
 
 ### Example Configuration File
 
@@ -174,6 +184,40 @@ Run with the custom configuration:
 ```bash
 poetry run biolm fine-tune --config-name custom_training --config-path ./my_experiment
 ```
+
+---
+
+## 📂 Output Directory Structure
+
+The framework organizes outputs in the following structure:
+
+```
+output/
+├── tokenize/          # Tokenizer files (HuggingFace format)
+├── pre-train/         # Pre-trained models
+├── fine-tune/         # Fine-tuned models and logs
+├── predict/           # Prediction outputs
+├── interpret/         # Interpretation results
+└── mlruns/            # MLflow logs and artifacts
+```
+
+- **Tokenizer**: Located in `output/tokenize/`.
+- **Trained Models**: Found in `output/pre-train/` or `output/fine-tune/`.
+- **Training Results**: Logs and metrics are in `output/fine-tune/logs/`.
+- **Prediction Outputs**: Stored in `output/predict/`.
+
+---
+
+## 📈 MLflow Tracking
+
+BioLM integrates with MLflow for experiment tracking. To enable MLflow:
+
+1. Set `mlflow.enabled: true` in the configuration.
+2. Access the MLflow UI:
+   ```bash
+   poetry run mlflow ui --backend-store-uri output/mlruns
+   ```
+3. Download artifacts (e.g., models, logs) directly from the UI.
 
 ---
 
