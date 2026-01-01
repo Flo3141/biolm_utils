@@ -71,7 +71,12 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
 
         replacements = None
         if handle_tokens == "replace":
-            replacements = list()
+            replacements = []
+
+        pad_token_id = getattr(self.tokenizer, "pad_token_id", None)
+        mask_token_id = getattr(self.tokenizer, "mask_token_id", None)
+        if mask_token_id is None:
+            mask_token_id = pad_token_id
 
         for occ_idx in range(input_len):
             sample = copy.copy(input_ids)
@@ -84,7 +89,7 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
                 else:
                     replace_list = []
                 if self.specs is not None:
-                    _replace_list = list()
+                    _replace_list = []
                     for t in replace_list:
                         if sum(self.specs[id][occ_idx]) == 0.0:
                             _replace_list.append(t)
@@ -99,10 +104,10 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
                 else:
                     _replace_list = replace_list
                 replacements.append(_replace_list)
-                replace_list = [
+                replace_ids = [
                     self.tokenizer.convert_tokens_to_ids(x) for x in replace_list
                 ]
-                for r in replace_list:
+                for r in replace_ids:
                     sample[occ_idx] = r
                     decoded_sample = self.tokenizer.decode(sample)
                     if self.tokensep is not None:
@@ -111,7 +116,13 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
                     if self.specs is not None:
                         sample_specs.append(self.specs[id])
                 if replacespecifier and sum(self.specs[id][occ_idx]) > 0:
-                    samples.append(text)
+                    if self.OHE is not None:
+                        decoded_sample = self.tokenizer.decode(sample)
+                        if self.tokensep is not None:
+                            decoded_sample = decoded_sample.replace(" ", self.tokensep)
+                        samples.append(decoded_sample)
+                    else:
+                        samples.append(text)
                     knockout_spec = self.specs[id].copy()
                     knockout_spec[occ_idx] = 0.0
                     sample_specs.append(knockout_spec)
@@ -119,8 +130,10 @@ class TauLOO_Evaluation_For_Regression(TauLOO_Evaluation):
             else:
                 if handle_tokens == "remove":
                     sample.pop(occ_idx)
-                elif handle_tokens == "mask":
-                    sample[occ_idx] = self.tokenizer.mask_token_id
+                    if pad_token_id is not None:
+                        sample.append(pad_token_id)
+                elif handle_tokens == "mask" and mask_token_id is not None:
+                    sample[occ_idx] = mask_token_id
 
                 decoded_sample = self.tokenizer.decode(sample)
                 if self.tokensep is not None:
@@ -168,7 +181,7 @@ class RegressionModelHelper(ModelHelper):
         show_progress=False,
         use_input_embeddings=False,
         output_hidden_states=False,
-        **tok_kwargs
+        **tok_kwargs,
     ):
         if isinstance(text, str):
             text = [text]
@@ -187,18 +200,55 @@ class RegressionModelHelper(ModelHelper):
                     batch.tolist(), padding="max_length", **tok_kwargs
                 )
                 if OHE is not None:
-                    item["input_ids"] = np.array(
-                        [
-                            OHE.transform(np.reshape(x, (-1, 1)))
-                            for x in item["input_ids"]
-                        ]
+                    transformed = [
+                        OHE.transform(np.reshape(x, (-1, 1))) for x in item["input_ids"]
+                    ]
+
+                    target_length = getattr(
+                        getattr(self.model, "config", None),
+                        "max_position_embeddings",
+                        None,
                     )
+                    if target_length is None:
+                        target_length = max(t.shape[0] for t in transformed)
+
+                    def _pad_sequence(arr, length):
+                        cur_len = arr.shape[0]
+                        if cur_len < length:
+                            pad_width = ((0, length - cur_len), (0, 0))
+                            return np.pad(
+                                arr,
+                                pad_width,
+                                mode="constant",
+                                constant_values=0.0,
+                            )
+                        if cur_len > length:
+                            return arr[:length]
+                        return arr
+
+                    padded_inputs = [
+                        _pad_sequence(arr, int(target_length)).astype(np.float32)
+                        for arr in transformed
+                    ]
+
                     if specs is not None:
-                        item["input_ids"] = np.concatenate(
-                            (specs, item["input_ids"]), axis=-1
-                        )
+                        specs_list = [np.asarray(spec) for spec in specs]
+                        adjusted_specs = [
+                            (
+                                _pad_sequence(spec_arr, int(target_length))
+                                if spec_arr.shape[0] != int(target_length)
+                                else spec_arr
+                            )
+                            for spec_arr in specs_list
+                        ]
+                        specs_array = np.stack(adjusted_specs, axis=0)
+                        padded_inputs = [
+                            np.concatenate((spec_arr, input_arr), axis=-1)
+                            for spec_arr, input_arr in zip(specs_array, padded_inputs)
+                        ]
+
                     item["input_ids"] = torch.tensor(
-                        item["input_ids"], dtype=torch.float
+                        np.stack(padded_inputs, axis=0), dtype=torch.float
                     )
                 item = {k: v.to(self.model.device) for k, v in item.items()}
 

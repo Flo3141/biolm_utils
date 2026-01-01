@@ -88,4 +88,4 @@ hydra:
     dir: ${outputpath}/${mode}
     subdir: .
   job:
-    name: null  # Disable Hydra's default cli.log creation
+    name: ""  # Disable Hydra's default cli.log creation

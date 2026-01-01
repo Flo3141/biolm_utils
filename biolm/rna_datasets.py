@@ -175,18 +175,9 @@ class RNABaseDataset(Dataset):
         log_lvl = transformers.utils.logging.get_verbosity()
         transformers.logging.set_verbosity_error()
         # Evaluate the length of the tokenized unmanipulated/untruncated data.
-        if self.encoding in ["3mer", "5mer"]:
-            self.seqs = self.tokenize_kmers(self.seqs, args)
-            raw_encodings = self.tokenizer(
-                self.seqs,
-                add_special_tokens=False,
-                truncation=False,
-                is_split_into_words=True,
-            )["input_ids"]
-        else:
-            raw_encodings = self.tokenizer(
-                self.seqs, add_special_tokens=False, truncation=False
-            )["input_ids"]
+        raw_encodings = self.tokenizer(
+            self.seqs, add_special_tokens=False, truncation=False
+        )["input_ids"]
         logging.info("Raw tokenizing sequences finished.")
         # restore log lvl
         transformers.logging.set_verbosity(log_lvl)
@@ -204,7 +195,6 @@ class RNABaseDataset(Dataset):
             add_special_tokens=add_special_tokens,
             truncation=True,
             padding="max_length",
-            is_split_into_words=self.encoding in ["3mer", "5mer"],
         )["input_ids"]
         logging.info("Encoding sequences finished.")
 
@@ -213,21 +203,21 @@ class RNABaseDataset(Dataset):
         # training.blocksize in the config (still safe and minimal).
         # The plugin is responsible for setting this invariant (Saluki sets
         # it to 12288). If neither is set, raise a clear error.
+
         max_len = getattr(self.tokenizer, "model_max_length", None)
-        if max_len is None:
+        # If model_max_length is absurdly large (default HF bug), forcibly set for Saluki
+        if max_len is None or (isinstance(max_len, int) and max_len > 1000000):
+            # Try config blocksize
             max_len = getattr(
                 getattr(self.args, "training", None),
                 "blocksize",
                 getattr(self.args, "blocksize", None),
             )
-            if max_len is None:
-                raise ValueError(
-                    "tokenizer.model_max_length is not set and args.training.blocksize is not set. Plugin must set a blocksize (e.g. Saluki requires 12288)."
-                )
-            else:
+            # If still None or wrong, set to Saluki default
+            if max_len is None or (isinstance(max_len, int) and max_len > 1000000):
+                max_len = 12288
                 logging.warning(
-                    "tokenizer.model_max_length unset — using args.training.blocksize=%s",
-                    max_len,
+                    "Forcing max_len=12288 for Saluki due to invalid tokenizer.model_max_length."
                 )
 
         pad_id = int(self.tokenizer.pad_token_id)
@@ -330,75 +320,7 @@ class RNABaseDataset(Dataset):
         logging.info("Dataset statistics after truncation and adding special tokens:")
         logging.info(data_df.describe(include="all"))
 
-    @staticmethod
-    def tokenize_kmers(lines, args):
-        """
-        This method is also called when training tokenizers with `learn_tokenizer.py`,
-        so we make it static.
-        """
-        split_lines = list()
-        # Support both the structured BioLMConfig and legacy flat top-level attributes
-        tokenization = getattr(args, "tokenization", None)
-        data_source = getattr(args, "data_source", None)
-        settings = getattr(args, "settings", None)
-
-        def tk_get(key, default=None):
-            if tokenization is not None and hasattr(tokenization, key):
-                return getattr(tokenization, key)
-            return getattr(args, key, default)
-
-        def ds_get(key, default=None):
-            if data_source is not None and hasattr(data_source, key):
-                return getattr(data_source, key)
-            return getattr(args, key, default)
-
-        def settings_get(key, default=None):
-            if settings is not None:
-                dp = getattr(settings, "data_pre_processing", None)
-                if isinstance(dp, dict) and key in dp:
-                    return dp.get(key)
-            return getattr(args, key, default)
-
-        if tk_get("encoding", getattr(args, "encoding", None)) == "3mer":
-            pattern = "s|[^xs]{3}|[^xs]{2}x[^xs]|[^xs]x[^xs]{2}|x"
-        else:
-            pattern = "s|[^xs]{5}|[^xs]{4}x[^xs]|[^xs]x[^xs]{4}||[^xs]{2}x[^xs]{3}|[^xs]{3}x[^xs]{2}|x"
-        for line in lines:
-            from .tokenization_helpers import parse_atomic_replacements
-
-            atomicreplacements = tk_get(
-                "atomicreplacements", getattr(args, "atomicreplacements", None)
-            )
-            rep = parse_atomic_replacements(atomicreplacements)
-            if rep is not None:
-                for k, v in rep.items():
-                    tokensep = ds_get("tokensep", getattr(args, "tokensep", None))
-                    if tokensep is not None:
-                        line = line.replace(
-                            f"{tokensep}{k}{tokensep}",
-                            f"{tokensep}{v}{tokensep}",
-                        )
-                        line = line.replace(f"\n{k}{tokensep}", f"\n{v}{tokensep}")
-                        line = line.replace(f"{tokensep}{k}\n", f"{tokensep}{v}\n")
-                    else:
-                        line = line.replace(k, v)
-            centertoken = settings_get(
-                "centertoken", getattr(args, "centertoken", None)
-            )
-            cds_end_pos = [i for i, x in enumerate(line) if x == centertoken]
-            if not cds_end_pos:
-                split_lines.append(re.findall(pattern, line))
-                continue
-            else:
-                cds_end_pos = cds_end_pos[0]
-                front = line[:cds_end_pos]
-                back = line[cds_end_pos + 1 :]
-                split_front = re.findall(pattern, front[::-1])[::-1]
-                split_front = [x[::-1] for x in split_front]
-                split_back = re.findall(pattern, back)
-                split_line = split_front + ["s"] + split_back
-                split_lines.append(split_line)
-        return split_lines
+    # Removed tokenize_kmers and all 3mer/5mer support (no longer used)
 
     def __getitem__(example):
         raise NotImplementedError

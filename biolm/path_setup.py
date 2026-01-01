@@ -34,12 +34,17 @@ def _adjust_paths_for_pretrained_model(
     args, modelloadpath: Optional[Path], tokenizerfile: Path
 ) -> tuple[Optional[Path], Path]:
     """Adjust paths if a pretrained model is specified."""
-    if args.inference and args.inference.pretrainedmodel:
+    if args.inference and getattr(args.inference, "pretrainedmodel", None):
         pretrained_path = Path(args.inference.pretrainedmodel)
         if args.mode != "pre-train":
             return pretrained_path, pretrained_path / "tokenize"
         else:
             return modelloadpath, pretrained_path / "tokenize"
+    # If in predict/interpret mode and no pretrainedmodel is set, use final_model if it exists
+    if args.mode in ["predict", "interpret"] and modelloadpath is not None:
+        final_model_dir = modelloadpath.parent / "final_model"
+        if final_model_dir.exists():
+            return final_model_dir, final_model_dir / "tokenize"
     return modelloadpath, tokenizerfile
 
 
