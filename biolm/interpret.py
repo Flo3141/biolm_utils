@@ -10,8 +10,8 @@ warnings.filterwarnings("ignore", message=".*The 'nopython' keyword.*")
 
 import shap
 
-from .config_access import ConfigManager
 from .loo_utils import TauLOO_Evaluation_For_Regression
+from .plugin_config import PluginManager
 from .train_utils import get_model_and_config
 
 
@@ -24,7 +24,7 @@ def loo_scores(
     output_path,
     remove_first_last,
 ):
-    config = ConfigManager.get_config()
+    plugin_config = PluginManager.get_config()
 
     # Compatibility helpers for structured config (BioLMConfig) and legacy
     # flat top-level attributes (migration compatibility). Most of these options are nested under `inference.looscores` or
@@ -73,18 +73,23 @@ def loo_scores(
     model = get_model_and_config(
         args=args,
         model_cls=model_cls,
-        model_config_cls=config.config_cls,
+        model_config_cls=plugin_config.config_cls,
         tokenizer=tokenizer,
         dataset=test_dataset,
         nlabels=nlabels,
         model_load_path=model_load_path,
-        pretraining_required=config.pretraining_required,
+        pretraining_required=plugin_config.pretraining_required,
         scaler=None,
     )
 
     # Send the model to the proper device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
+
+    # Ensure scaler information is available on the model for downstream use
+    dataset_scaler = getattr(test_dataset.dataset, "scaler", None)
+    if dataset_scaler is not None and not hasattr(model, "scaler"):
+        model.scaler = dataset_scaler
 
     loo_scores = list()
 
@@ -97,38 +102,64 @@ def loo_scores(
         tokensep=ds_get("tokensep", getattr(args, "tokensep", None)),
     )
 
-    for i, test_id in enumerate(
-        test_idx[
-            : len(test_idx) if not debug_get("dev", False) else debug_get("dev", False)
-        ]
-    ):
+    eval_indices = test_idx[
+        : len(test_idx) if not debug_get("dev", False) else debug_get("dev", False)
+    ]
+    total_sequences = len(eval_indices)
+
+    for i, test_id in enumerate(eval_indices):
         seq = test_dataset.dataset.lines[test_id]
         # Use the scaler from the dataset or model directly
-        scaler = getattr(test_dataset.dataset, "scaler", model.scaler)
+        scaler = getattr(test_dataset.dataset, "scaler", None)
+        if scaler is None:
+            scaler = getattr(model, "scaler", None)
+        if scaler is None:
 
-        loo_score, rescaled_pred, token_list, replacements = (
-            tl.compute_leave_one_out_occlusion(
-                text=seq,
-                id=test_id,
-                remove_first_last=remove_first_last,
-                handle_tokens=inf_loose_get(
-                    "handletokens", getattr(args, "handletokens", None)
-                ),
-                scaler=scaler,  # Use the resolved scaler
-                batch_size=getattr(
-                    getattr(args, "training", None),
-                    "batchsize",
-                    getattr(args, "batchsize", None),
-                ),
-                replacement_dict=inf_loose_get(
-                    "replacementdict", getattr(args, "replacementdict", None)
-                ),
-                replacespecifier=inf_loose_get(
-                    "replacespecifier", getattr(args, "replacespecifier", None)
-                ),
-                dev=debug_get("dev", False),
-            )
+            class _IdentityScaler:
+                """Fallback scaler that leaves values unchanged."""
+
+                def inverse_transform(self, values):
+                    return values
+
+            scaler = _IdentityScaler()
+            if not hasattr(model, "scaler"):
+                model.scaler = scaler
+
+        handle_tokens = inf_loose_get(
+            "handletokens", getattr(args, "handletokens", None)
         )
+        if handle_tokens is None:
+            handle_tokens = "mask"
+
+        try:
+            loo_score, rescaled_pred, token_list, replacements = (
+                tl.compute_leave_one_out_occlusion(
+                    text=seq,
+                    id=test_id,
+                    remove_first_last=remove_first_last,
+                    handle_tokens=handle_tokens,
+                    scaler=scaler,  # Use the resolved scaler
+                    batch_size=getattr(
+                        getattr(args, "training", None),
+                        "batchsize",
+                        getattr(args, "batchsize", None),
+                    ),
+                    replacement_dict=inf_loose_get(
+                        "replacementdict", getattr(args, "replacementdict", None)
+                    ),
+                    replacespecifier=inf_loose_get(
+                        "replacespecifier", getattr(args, "replacespecifier", None)
+                    ),
+                    dev=debug_get("dev", False),
+                )
+            )
+        except RuntimeError as err:
+            logging.warning(
+                "Skipping sequence %s during LOO scoring due to runtime error: %s",
+                test_id,
+                err,
+            )
+            continue
         token_list = [x.replace("Ġ", "") for x in token_list]
         scores = list()
         if replacements is not None:
@@ -237,11 +268,24 @@ def loo_scores(
                 "loo",
             ]
         if i == 0:
-            logging.info(f"Saving to {csv_file}")
+            logging.info(
+                "Writing %d rows for sample %s (%d/%d) to %s",
+                len(data),
+                seq,
+                i + 1,
+                total_sequences,
+                csv_file,
+            )
             df = pd.DataFrame(data, columns=columns)
             df.to_csv(csv_file, index=False)
         else:
-            logging.info(f"Adding to {csv_file}")
+            logging.info(
+                "Appending %d rows for sample %s (%d/%d)",
+                len(data),
+                seq,
+                i + 1,
+                total_sequences,
+            )
             df = pd.DataFrame(data)
             df.to_csv(csv_file, index=False, mode="a", header=False)
 

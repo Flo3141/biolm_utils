@@ -1,4 +1,5 @@
 > **Note:** The `biolm-2.0` branch contains the latest, actively developed version of BioLM with major improvements and a new plugin architecture. The `main` branch is legacy. For the newest features and code, please [switch to the `biolm-2.0` branch](https://github.com/dieterich-lab/biolm_utils/tree/biolm-2.0).
+> **Note:** The `biolm-2.0` branch contains the latest, actively developed version of BioLM with major improvements and a new plugin architecture. The `main` branch is legacy. For the newest features and code, please [switch to the `biolm-2.0` branch](https://github.com/dieterich-lab/biolm_utils/tree/biolm-2.0).
 
 # BioLM 2.0 Framework
 
@@ -72,6 +73,62 @@ seq_002     2.3      a,t,g,c,a,g,t,c,...
 - Language models (e.g., XLNet) require pre-training before fine-tuning.
 - CNN-based models (e.g., Saluki) do **not** require pre-training.
 
+### Mode Quickstart
+
+Below are the canonical commands, vital configuration knobs, and outputs for each mode. Reference paths assume you keep experiment-specific overrides under `./my_experiment` and set `outputpath` inside that config.
+
+**Tokenize**
+
+```bash
+poetry run biolm tokenize --config-path ./my_experiment
+```
+
+- Key config values: `data_source.filepath`, `tokenization.encoding`, `tokenization.vocabsize`.
+- Output: tokenizer artifacts in `${outputpath}/tokenize` (e.g., merges.txt, vocab.json).
+
+**Pre-train**
+
+```bash
+poetry run biolm pre-train --config-path ./my_experiment
+```
+
+- Requires a plugin whose config sets `task: pre-train` (see `mode/pre-train.yaml`).
+- Important options: `training.nepochs`, `training.batchsize`, `training.scaling`, `settings.mlflow.enabled`.
+- Output: pretrained weights and logs in `${outputpath}/pre-train`.
+
+**Fine-tune**
+
+```bash
+poetry run biolm fine-tune --config-path ./my_experiment
+```
+
+- Make sure `plugin` points to the installed model package and `task` matches the plugin expectation (classification/regression).
+- Main toggles: `data_source.splitratio`, `training.nepochs`, `training.patience`, `training.gradacc`.
+- Output: fine-tuned checkpoints, metrics, and MLflow logs in `${outputpath}/fine-tune`.
+
+**Predict**
+
+```bash
+poetry run biolm predict --config-path ./my_experiment inference.pretrainedmodel=/path/to/model.ckpt
+```
+
+- Ensure `inference.pretrainedmodel` is set to the checkpoint produced by fine-tuning or pre-training.
+- Optional overrides: `inference.looscores.handletokens` (defaults to `mask` here), `debugging.dev` for quick dry-runs.
+- Output: prediction CSVs in `${outputpath}/predict`.
+
+**Interpret**
+
+```bash
+poetry run biolm interpret --config-path ./my_experiment inference.pretrainedmodel=/path/to/model.ckpt
+```
+
+- Core options under `inference.looscores`:
+  - `handletokens`: `mask` (default) or `remove` to control occlusion behaviour.
+  - `replacementdict`: dictionary limiting replacements per token; leave `null` for full masking.
+  - `replacespecifier`: boolean to include sequence specifier fields in replacements.
+- Other useful flags: `debugging.dev` to restrict the number of samples, `training.batchsize` for occlusion batching.
+- Output: LOO scores saved as CSV and pickle in `${outputpath}/interpret`.
+
 ---
 
 ## 🛠️ Usage
@@ -120,9 +177,12 @@ biolm/conf
 - **`data_source.columnsep`**: Specifies the delimiter for input files (default: `\t`).
 - **`data_source.splitratio`**: Defines the train/validation/test split ratios.
 - **`training.nepochs`**: Number of training epochs (default: 100).
-- **`training.batchsize`**: Batch size for training (default: 8).
+- **`training.batchsize`**: Batch size for training and interpretation batches (default: 8; interpret mode reads this value).
 - **`mlflow.enabled`**: Enables MLflow tracking (default: `true`).
 - **`mlflow.tracking_uri`**: Directory for MLflow logs (default: `${outputpath}/mlruns`).
+- **`inference.looscores.handletokens`**: How LOO occlusion handles tokens (`mask`, `remove`, or `null` to disable).
+- **`inference.looscores.replacementdict`**: Restricts replacements to specific token sets for interpret mode (default: `null`).
+- **`inference.looscores.replacespecifier`**: Toggles replacement of sequence specifiers during interpretation (`false` by default).
 
 ### Example Configuration File
 
