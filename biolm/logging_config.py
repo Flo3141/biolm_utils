@@ -86,7 +86,8 @@ def setup_logging(log_file=None):
 
         stdout_logger = logging.getLogger("stdout")
         sys.stdout = StreamToLogger(stdout_logger, logging.INFO)
-        sys.stderr = StreamToLogger(stdout_logger, logging.ERROR)
+        # Map stderr to INFO to avoid misleading "ERROR" prefixes for libraries that print to stderr
+        sys.stderr = StreamToLogger(stdout_logger, logging.INFO)
 
         # Add a flush method to ensure all outputs are written immediately
         class FlushStreamToLogger(StreamToLogger):
@@ -95,7 +96,8 @@ def setup_logging(log_file=None):
                     handler.flush()
 
         sys.stdout = FlushStreamToLogger(stdout_logger, logging.INFO)
-        sys.stderr = FlushStreamToLogger(stdout_logger, logging.ERROR)
+        # Keep stderr at INFO level for cleaner logs; genuine errors still go through the root handler
+        sys.stderr = FlushStreamToLogger(stdout_logger, logging.INFO)
 
     root_logger.setLevel(logging.INFO)
 
@@ -155,4 +157,7 @@ def setup_logging(log_file=None):
         logging.WARNING
     )
     logging.getLogger("transformers.models").setLevel(logging.CRITICAL)
+    logging.getLogger("transformers.integrations.tensor_parallel").setLevel(
+        logging.ERROR
+    )
     logging.getLogger("accelerate.accelerator").setLevel(logging.WARNING)

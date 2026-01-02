@@ -23,7 +23,8 @@ from .path_setup import PathsManager
 from .plugin_config import PluginManager
 
 args = ConfigManager.get_config()
-constants = get_constants()
+# Avoid logging params during early import; the CLI reinitializes and logs once.
+constants = get_constants(log_params=False)
 paths = PathsManager.get_paths()
 from .interpret import loo_scores
 from .params import get_detected_ngpus

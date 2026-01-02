@@ -245,8 +245,11 @@ def get_tokenizer(args, tokenizer_file, tokenizer_cls, pretraining_required):
             not tokenizer_dir.exists()
             or not (tokenizer_dir / "tokenizer_config.json").exists()
         ):
-            tokenizer_dir = tokenizer_file.parent
-            logger.info(f"Falling back to loading tokenizer from {tokenizer_dir}")
+            parent_dir = tokenizer_file.parent
+            logger.info(
+                f"Tokenizer config not found in {tokenizer_dir}; trying {parent_dir}"
+            )
+            tokenizer_dir = parent_dir
         tokenizer_kwargs = {
             "model_max_length": blocksize,
             "truncation": True,
