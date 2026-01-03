@@ -106,14 +106,14 @@ jobs:
           poetry install --no-interaction
           cd ../rna_protein_xlnet
           poetry install --no-interaction
-      - name: Install framework with plugin extras
+          cd ..
+      - name: Install framework (agnostic) and add local plugins
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           cd biolm_utils
-          sed -i 's|/home/pwiesenbach/rna_saluki_cnn|../rna_saluki_cnn|g' pyproject.toml
-          sed -i 's|/home/pwiesenbach/rna_protein_xlnet|../rna_protein_xlnet|g' pyproject.toml
-          poetry lock --no-update
-          poetry install --no-interaction --with plugins
+          poetry install --no-interaction --with dev
+          # install checked-out plugins into the same venv without touching pyproject
+          poetry run pip install ../rna_saluki_cnn ../rna_protein_xlnet
       - name: Run plugin discovery tests
         run: |
           export PATH="$HOME/.local/bin:$PATH"
