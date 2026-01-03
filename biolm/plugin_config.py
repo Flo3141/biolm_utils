@@ -16,8 +16,9 @@ Example usage:
     PluginManager.set_config(config)
 """
 
+import importlib.metadata
 from dataclasses import dataclass
-from typing import Any, Optional, Type
+from typing import Any, Dict, Optional, Tuple, Type
 
 # Optional imports - plugins can override these
 try:
@@ -202,3 +203,85 @@ class PluginManager:
     def set_config(cls, config: PluginConfig) -> None:
         """Set the plugin configuration."""
         cls._instance = config
+
+
+def _get_entry_points_for_group(group: str):
+    """Return entry points for a group across Python versions."""
+    try:
+        eps = importlib.metadata.entry_points(group=group)
+    except TypeError:
+        eps = importlib.metadata.entry_points()
+
+    if hasattr(eps, "select"):
+        return list(eps.select(group=group))
+
+    # Some callers/tests may monkeypatch entry_points to return a bare list.
+    if isinstance(eps, list):
+        return eps
+
+    return list(eps.get(group, []))
+
+
+def _find_entry_point(plugin_name: str):
+    """Find the entry point matching the plugin name."""
+    eps = _get_entry_points_for_group("biolm.plugins")
+    for ep in eps:
+        if ep.name == plugin_name:
+            return ep
+    return None
+
+
+def _extract_plugin_defaults(
+    plugin_obj: Any,
+) -> Tuple[Dict[str, Any], Optional[PluginConfig]]:
+    """Normalize a plugin factory return into defaults and a PluginConfig."""
+    plugin_defaults: Dict[str, Any] = {}
+    plugin_config: Optional[PluginConfig] = None
+
+    if isinstance(plugin_obj, PluginConfig):
+        plugin_config = plugin_obj
+    elif isinstance(plugin_obj, dict):
+        plugin_defaults = plugin_obj
+    elif isinstance(plugin_obj, tuple) and len(plugin_obj) == 2:
+        maybe_config, maybe_defaults = plugin_obj
+        if isinstance(maybe_defaults, dict):
+            plugin_defaults = maybe_defaults
+        if isinstance(maybe_config, PluginConfig):
+            plugin_config = maybe_config
+        elif plugin_config is None and not isinstance(maybe_config, dict):
+            # Allow attr-style objects that resemble PluginConfig
+            plugin_config = maybe_config
+    else:
+        # Treat attr-style objects as PluginConfig-like
+        plugin_config = plugin_obj
+
+    return plugin_defaults, plugin_config
+
+
+def load_plugin_defaults(plugin_name: str) -> Dict[str, Any]:
+    """Load plugin defaults via entry point and seed PluginManager.
+
+    Returns a dict of Hydra-compatible overrides (may be empty) that should be
+    merged at lower precedence than user-provided config. Also sets the
+    PluginManager config if the plugin returns a PluginConfig-like object.
+    """
+
+    ep = _find_entry_point(plugin_name)
+    if ep is None:
+        raise RuntimeError(
+            f"Plugin '{plugin_name}' not found. Ensure it registers under the 'biolm.plugins' entry-point group."
+        )
+
+    plugin_factory = ep.load()
+    plugin_obj = plugin_factory()
+
+    plugin_defaults, plugin_config = _extract_plugin_defaults(plugin_obj)
+
+    if plugin_config is not None:
+        try:
+            PluginManager.set_config(plugin_config)
+        except Exception:
+            # Don't fail if a legacy object is returned; keep best-effort behavior
+            PluginManager.set_config(PluginConfig())
+
+    return plugin_defaults

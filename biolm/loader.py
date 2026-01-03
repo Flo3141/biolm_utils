@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
+from .plugin_config import load_plugin_defaults
 from .structured_config import (
     BioLMConfig,
     DataSourceConfig,
@@ -22,6 +23,25 @@ from .structured_config import (
 )
 
 
+def _apply_plugin_defaults(cfg: DictConfig) -> DictConfig:
+    """Merge plugin-provided defaults beneath user/Hydra config.
+
+    Plugin defaults are loaded via entry points. They are merged at lower
+    precedence so user overrides still win.
+    """
+
+    plugin_name = cfg.get("plugin") if cfg else None
+    if not plugin_name:
+        return cfg
+
+    plugin_defaults = load_plugin_defaults(plugin_name)
+    if not plugin_defaults:
+        return cfg
+
+    defaults_cfg = OmegaConf.create(plugin_defaults)
+    return OmegaConf.merge(defaults_cfg, cfg)
+
+
 def _process_hydra_config(cfg: DictConfig) -> BioLMConfig:
     """Turn a resolved DictConfig into our structured BioLMConfig.
 
@@ -29,6 +49,8 @@ def _process_hydra_config(cfg: DictConfig) -> BioLMConfig:
     extracted here so `params.py` can become a thin re-exporting wrapper.
     """
     from omegaconf import OmegaConf
+
+    cfg = _apply_plugin_defaults(cfg)
 
     config_dict = OmegaConf.to_container(cfg, resolve=True)
     if not isinstance(config_dict, dict):

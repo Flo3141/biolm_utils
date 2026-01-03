@@ -1,18 +1,29 @@
 """Configuration access and helpers using singleton pattern."""
 
+import warnings
 from typing import Any
 
 from .loader import load_config
 
 
 class ConfigManager:
-    """Singleton manager for lazy configuration loading."""
+    """Singleton manager for lazy configuration loading.
+
+    Deprecated: prefer threading Hydra's DictConfig through your call stack
+    instead of using this singleton. This remains for backward compatibility
+    while call sites are migrated.
+    """
 
     _instance = None
 
     @classmethod
     def get_config(cls):
         """Get the configuration, loading it lazily if needed."""
+        warnings.warn(
+            "ConfigManager is deprecated; use the Hydra-provided config directly instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if cls._instance is None:
             cls._instance = load_config()
         return cls._instance

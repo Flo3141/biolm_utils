@@ -39,6 +39,24 @@ from .train_utils import (
     get_trainer,
 )
 
+
+def initialize_runtime(config):
+    """Propagate Hydra config to module-level singletons and caches."""
+    global args, constants, paths
+
+    ConfigManager._instance = config
+    PathsManager.set_config(config)
+
+    # Refresh derived caches with the new config
+    from .constants import get_constants as _get_constants
+    from .constants import reset_constants
+
+    reset_constants()
+    args = config
+    constants = _get_constants(args=config)
+    paths = PathsManager.get_paths(config=config)
+
+
 # --- Configuration & Setup ---
 
 SEED = 0

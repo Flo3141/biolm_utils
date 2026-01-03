@@ -22,26 +22,37 @@ from .trainer import (
 )
 
 
-def setup_constants(log_params: bool = True):
+def _resolve_config(args=None):
+    """Return provided args or fall back to the deprecated ConfigManager."""
+    return args if args is not None else ConfigManager.get_config()
+
+
+def setup_constants(log_params: bool = True, args=None):
     """Set up and return derived constants.
 
     log_params controls whether the parameter header is emitted. Set False for
     early imports; the real run can log once after plugin load.
     """
-    args = ConfigManager.get_config()
-    paths = PathsManager.get_paths()
+    args = _resolve_config(args)
+    paths = PathsManager.get_paths(config=args)
+
+    training_cfg = getattr(args, "training", None)
+    debugging_cfg = getattr(args, "debugging", None)
 
     # We scale the gradient with respect to the number of GPUs to keep an
     # effective batch size of `args.batchsize` x `args.gradacc`
-    if ConfigManager.d_get("dev", False):
+    if getattr(debugging_cfg, "dev", False):
         gradacc = 1
+        detected_gpus = 1
     else:
         detected_gpus = get_detected_ngpus(args)
     # training.gradacc is the configured gradient-accumulation multiplier
     gradacc = max(
         1,
         int(
-            round(float(ConfigManager.t_get("gradacc", 1)) / max(1, int(detected_gpus)))
+            round(
+                float(getattr(training_cfg, "gradacc", 1)) / max(1, int(detected_gpus))
+            )
         ),
     )
 
@@ -122,7 +133,7 @@ def setup_constants(log_params: bool = True):
                 f"{'model_save_path':>25} : {model_save_path if model_save_path is not None else '(none)'}"
             )
 
-    if args.training.resume:
+    if training_cfg and getattr(training_cfg, "resume", False):
         checkpointpath = max(
             paths["MODELSAVEPATH"].glob("checkpoint*"), key=os.path.getmtime
         )
@@ -132,7 +143,7 @@ def setup_constants(log_params: bool = True):
 
     regressiontrainer_cls = (
         WeightedRegressionTrainer
-        if ConfigManager.get_training().weightedregression
+        if getattr(training_cfg, "weightedregression", False)
         else RegressionTrainer
     )
 
@@ -160,7 +171,13 @@ def setup_constants(log_params: bool = True):
 _constants = None
 
 
-def get_constants(log_params: bool = True):
+def reset_constants():
+    """Clear the cached constants so they recompute for a new config."""
+    global _constants
+    _constants = None
+
+
+def get_constants(log_params: bool = True, args=None):
     """Get constants dict, setting up lazily if needed.
 
     log_params controls whether to emit the parameter header when computing
@@ -168,5 +185,5 @@ def get_constants(log_params: bool = True):
     """
     global _constants
     if _constants is None:
-        _constants = setup_constants(log_params=log_params)
+        _constants = setup_constants(log_params=log_params, args=args)
     return _constants

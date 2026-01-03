@@ -48,9 +48,14 @@ def _adjust_paths_for_pretrained_model(
     return modelloadpath, tokenizerfile
 
 
-def setup_paths() -> Dict[str, Optional[Path]]:
+def _resolve_config(args=None):
+    """Return provided args or fall back to the deprecated ConfigManager."""
+    return args if args is not None else ConfigManager.get_config()
+
+
+def setup_paths(args=None) -> Dict[str, Optional[Path]]:
     """Set up and return all path constants based on config."""
-    args = ConfigManager.get_config()
+    args = _resolve_config(args)
 
     outputpath = _get_default_output_path(args)
     outputpath.mkdir(parents=True, exist_ok=True)
@@ -103,10 +108,17 @@ class PathsManager:
     """Singleton manager for lazy path setup."""
 
     _instance = None
+    _config = None
 
     @classmethod
-    def get_paths(cls) -> Dict[str, Optional[Path]]:
+    def set_config(cls, config) -> None:
+        """Seed the path manager with a specific config and reset the cache."""
+        cls._config = config
+        cls._instance = None
+
+    @classmethod
+    def get_paths(cls, config=None) -> Dict[str, Optional[Path]]:
         """Get paths dict, setting up lazily if needed."""
         if cls._instance is None:
-            cls._instance = setup_paths()
+            cls._instance = setup_paths(args=config or cls._config)
         return cls._instance

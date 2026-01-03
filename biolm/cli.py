@@ -30,9 +30,7 @@ def _hydra_main(cfg: DictConfig):
     processed_config = _process_hydra_config(cfg)
 
     # Set the config for the framework to use
-    from .config_access import ConfigManager
-
-    ConfigManager._instance = processed_config
+    from .biolm import initialize_runtime
 
     # Set MLflow defaults if enabled
     if (
@@ -51,48 +49,7 @@ def _hydra_main(cfg: DictConfig):
             )
 
     # Reset cached module-level state to use the new config
-    from . import biolm as biolm_module
-    from . import constants as constants_module
-    from .path_setup import PathsManager
-
-    PathsManager._instance = None
-    constants_module._constants = None
-    biolm_module.args = processed_config
-    biolm_module.constants = constants_module.get_constants()
-    biolm_module.paths = PathsManager.get_paths()
-
-    # Load plugin if specified
-    if processed_config.plugin:
-        plugin_loaded = False
-        available_plugins = []
-        try:
-            # Try to load plugin via entry points
-            import importlib.metadata
-
-            eps = importlib.metadata.entry_points(group="biolm.plugins")
-            available_plugins = [ep.name for ep in eps]
-            for ep in eps:
-                if ep.name == processed_config.plugin:
-                    plugin_func = ep.load()
-                    plugin_func()
-                    print(
-                        f"Plugin {processed_config.plugin} loaded successfully via entry point."
-                    )
-                    plugin_loaded = True
-                    break
-        except Exception as e:
-            print(f"Warning: Could not load plugin {processed_config.plugin}: {e}")
-            import traceback
-
-            traceback.print_exc()
-
-        if not plugin_loaded:
-            print(
-                "Warning: Plugin {name} could not be loaded. Available entry-point plugins: {available}.".format(
-                    name=processed_config.plugin,
-                    available=available_plugins,
-                )
-            )
+    initialize_runtime(processed_config)
 
     # Run the main function
     from .biolm import main

@@ -44,3 +44,38 @@ def test_load_config_rejects_legacy_ngpus_override():
                 "data_source.splitratio=[80,20]",
             ]
         )
+
+
+def test_plugin_defaults_are_merged(monkeypatch):
+    """Plugin defaults should merge beneath user overrides."""
+
+    class DummyEntryPoint:
+        name = "dummy"
+
+        def load(self):
+            return lambda: {
+                "tokenization": {"vocabsize": 123},
+                "training": {"batchsize": 64},
+            }
+
+    def fake_entry_points(group=None):
+        if group == "biolm.plugins":
+            return [DummyEntryPoint()]
+        return []
+
+    monkeypatch.setattr("importlib.metadata.entry_points", fake_entry_points)
+
+    cfg = OmegaConf.create(
+        {
+            "mode": "tokenize",
+            "plugin": "dummy",
+            "debugging": {"accelerator": "cpu"},
+            # User override should win over plugin default
+            "training": {"batchsize": 8},
+        }
+    )
+
+    out = loader._process_hydra_config(cfg)
+
+    assert out.training.batchsize == 8
+    assert out.tokenization.vocabsize == 123
