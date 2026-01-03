@@ -21,7 +21,7 @@ This document summarizes what a BioLM plugin must expose so the framework can lo
 - `datacollator_cls_for_finetuning`: data collator for fine-tune/predict/interpret (defaults to HF `DefaultDataCollator`).
 - `special_tokenizer_for_trainer_cls`: optional alternate tokenizer for the trainer only.
 - `add_special_tokens`: whether to inject special tokens into the tokenizer.
-- Training defaults such as `learning_rate`, `max_grad_norm`, `weight_decay` (used as fallbacks if not overridden in Hydra configs).
+- Training defaults such as `max_grad_norm`, `weight_decay`. The learning rate is fixed inside the plugin implementation and is not user-configurable via Hydra.
 
 ## Dataset expectations
 - Dataset must honor the positions and delimiter from `data_source.*` (e.g., `filepath`, `columnsep`, `idpos`, `seqpos`, `labelpos`).

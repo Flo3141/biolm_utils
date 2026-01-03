@@ -56,6 +56,17 @@ def _process_hydra_config(cfg: DictConfig) -> BioLMConfig:
     if not isinstance(config_dict, dict):
         raise RuntimeError("Configuration must resolve to a dictionary")
 
+    # learning_rate is fixed by plugins; block user overrides in Hydra configs
+    def _has_lr(conf) -> bool:
+        if not conf:
+            return False
+        return isinstance(conf, dict) and "learning_rate" in conf
+
+    if _has_lr(config_dict) or _has_lr(config_dict.get("training")):
+        raise ValueError(
+            "'learning_rate' is fixed by the selected plugin and cannot be set via Hydra config."
+        )
+
     # Backward compatibility: allow legacy `model=` CLI overrides to select plugins.
     model_value = config_dict.get("model")
     if isinstance(model_value, str) and model_value and not config_dict.get("plugin"):

@@ -307,7 +307,6 @@ To create a new composition, you can define additional configuration files. For 
 training:
   nepochs: 50
   batchsize: 16
-  learning_rate: 0.001
 ```
 
 Run with the custom configuration:
