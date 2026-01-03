@@ -168,7 +168,7 @@ poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --conf
   outputpath: /tmp/biolm_saluki_quick
   task: classification
   data_source:
-    filepath: /prj/RNA_NLP/rna_saluki_cnn/internal_test_data/dummy_rna_data.txt
+    filepath: /prj/RNA_NLP/biolm_utils/examples/data/quickstart_sequences.tsv
     columnsep: "\t"
     idpos: 1
     seqpos: 3
@@ -187,7 +187,7 @@ poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --conf
   outputpath: /tmp/biolm_xlnet_quick
   task: classification
   data_source:
-    filepath: /prj/RNA_NLP/rna_protein_xlnet/internal_test_data/rna.txt
+    filepath: /prj/RNA_NLP/biolm_utils/examples/data/quickstart_sequences.tsv
     columnsep: "\t"
     idpos: 1
     seqpos: 2
@@ -210,8 +210,8 @@ poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --conf
 
 | Plugin | Model | Sequences | Pre-training | Use Case |
 |--------|-------|-----------|--------------|----------|
-| [rna_protein_xlnet](https://github.com/dieterich-lab/rna_protein_xlnet) | XLNet | RNA/Protein | Yes | General sequence analysis and prediction |
-| [rna_saluki_cnn](https://github.com/dieterich-lab/rna_saluki_cnn) | CNN | RNA | No | m6A modification site prediction |
+| [rna_protein_xlnet](https://github.com/dieterich-lab/rna_protein_xlnet) | XLNet | RNA/DNA/Protein | Yes | General sequence modeling (pre-train + downstream tasks) |
+| [rna_saluki_cnn](https://github.com/dieterich-lab/rna_saluki_cnn) | CNN | RNA/DNA/Protein | No | Sequence classification/regression without pre-train |
 
 ---
 
@@ -250,6 +250,8 @@ biolm/conf
 **Hardware note:** XLNet-style LMs are GPU-oriented; Saluki CNN can run on CPU but is faster on GPU. The framework will pick GPU if available (`gpu.py`) and fall back to CPU.
 
 **Why Hydra plus PluginConfig/Config?** Hydra powers user-facing composition/overrides, while `PluginConfig`/`Config` give plugin authors a typed place to declare model/dataset/tokenizer defaults and allow programmatic registration (tests, programmatic runs). We keep both to balance UX and plugin ergonomics.
+
+**Sample data for quickstarts:** Both quickstarts use the bundled `examples/data/quickstart_sequences.tsv` (tab-separated, columns: id, label, sequence) so they run out-of-the-box without the plugin repos checked out.
 
 ### Example Configuration File
 
