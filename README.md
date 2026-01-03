@@ -159,6 +159,51 @@ poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --conf
 4. Mode dispatcher (`runner`) calls the appropriate trainer/evaluator.
 5. Artifacts and logs are written to `${outputpath}/{mode}`; MLflow (if enabled) logs params/metrics/artifacts to `${outputpath}/mlruns`.
 
+## ⚡ Quickstart Examples
+
+- **Saluki (CNN, no pre-train, CPU ok)**
+  ```bash
+  # minimal config (saluki_quick.yaml)
+  plugin: rna_saluki_cnn
+  outputpath: /tmp/biolm_saluki_quick
+  task: classification
+  data_source:
+    filepath: /prj/RNA_NLP/rna_saluki_cnn/internal_test_data/dummy_rna_data.txt
+    columnsep: "\t"
+    idpos: 1
+    seqpos: 3
+    labelpos: 2
+    splitratio: [70, 15, 15]
+  training:
+    nepochs: 3
+    batchsize: 4
+  ```
+  Run: `poetry run biolm fine-tune --config-path . --config-name saluki_quick`
+
+- **XLNet (needs pre-train, GPU recommended)**
+  ```bash
+  # minimal config (xlnet_quick.yaml)
+  plugin: rna_protein_xlnet
+  outputpath: /tmp/biolm_xlnet_quick
+  task: classification
+  data_source:
+    filepath: /prj/RNA_NLP/rna_protein_xlnet/internal_test_data/rna.txt
+    columnsep: "\t"
+    idpos: 1
+    seqpos: 2
+    labelpos: 3
+    splitratio: [70, 15, 15]
+  training:
+    nepochs: 1
+    batchsize: 2
+    blocksize: 256
+  ```
+  Run sequence:
+  1) `poetry run biolm tokenize --config-path . --config-name xlnet_quick`
+  2) `poetry run biolm pre-train --config-path . --config-name xlnet_quick`
+  3) `poetry run biolm fine-tune --config-path . --config-name xlnet_quick`
+  4) `poetry run biolm predict --config-path . --config-name xlnet_quick`
+
 ---
 
 ## 🔌 Available Plugins
@@ -203,6 +248,8 @@ biolm/conf
 - **`mlflow.enabled`**, **`mlflow.tracking_uri`**: Toggle tracking and set the MLflow artifact store (default `${outputpath}/mlruns`).
 
 **Hardware note:** XLNet-style LMs are GPU-oriented; Saluki CNN can run on CPU but is faster on GPU. The framework will pick GPU if available (`gpu.py`) and fall back to CPU.
+
+**Why Hydra plus PluginConfig/Config?** Hydra powers user-facing composition/overrides, while `PluginConfig`/`Config` give plugin authors a typed place to declare model/dataset/tokenizer defaults and allow programmatic registration (tests, programmatic runs). We keep both to balance UX and plugin ergonomics.
 
 ### Example Configuration File
 
@@ -311,6 +358,10 @@ BioLM integrates with MLflow for experiment tracking. To enable MLflow:
 3. Download artifacts (e.g., models, logs) directly from the UI.
 
 ---
+
+## 📜 Plugin Contract (for plugin authors)
+
+See [docs/PLUGIN_CONTRACT.md](docs/PLUGIN_CONTRACT.md) for the required entry point, factory return shape, and dataset/model/tokenizer expectations.
 
 ## 🧪 Testing
 
