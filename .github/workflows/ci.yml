@@ -7,44 +7,34 @@ on:
     branches: [ main, biolm-2.0 ]
 
 jobs:
-  test:
+  tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.10, 3.11]
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Install Poetry and dependencies (dev extras)
+      - name: Install Poetry and dev deps
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
           poetry --version
-          # use in-project venv for hermetic CI
           poetry config virtualenvs.in-project true --local || true
           poetry install --no-interaction --with dev
-
       - name: Lint (ruff)
         run: |
           pip install ruff
-          ruff check . || true
-
-      - name: Run tests
+          ruff check .
+      - name: Run test suite
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           poetry run pytest -q
-
       - name: Fail if deprecated config keys present
         run: |
           set -e
-          # Search for the deprecated key 'learningrate' anywhere in the repo
           if grep -R --line-number --exclude-dir .git -e '\blearningrate\b' .; then
             echo "Found deprecated 'learningrate' usage. Please migrate to 'learning_rate'."
             exit 1
@@ -53,26 +43,90 @@ jobs:
   mlflow-smoke:
     name: MLflow smoke tests
     runs-on: ubuntu-latest
-    needs: test
+    needs: tests
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.11
-
       - name: Install Poetry and dependencies + mlflow
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
           poetry config virtualenvs.in-project true --local || true
           poetry install --no-interaction --with dev
-          # install mlflow extras into the environment
           poetry install --no-interaction --with mlflow
-
       - name: Run MLflow smoke tests
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           poetry run pytest -q tests/test_mlflow_integration.py tests/test_runner_mlflow.py tests/test_mlflow_smoke.py tests/test_mlflow_model_logging.py
+
+  plugin-compat:
+    name: Plugin compatibility
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - name: Checkout framework
+        uses: actions/checkout@v4
+        with:
+          path: biolm_utils
+      - name: Checkout Saluki plugin
+        uses: actions/checkout@v4
+        with:
+          repository: dieterich-lab/rna_saluki_cnn
+          ref: saluki-2.0
+          path: rna_saluki_cnn
+      - name: Checkout XLNet plugin
+        uses: actions/checkout@v4
+        with:
+          repository: dieterich-lab/rna_protein_xlnet
+          ref: main
+          path: rna_protein_xlnet
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry --version
+      - name: Install plugins
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          cd rna_saluki_cnn
+          poetry install --no-interaction
+          cd ../rna_protein_xlnet
+          poetry install --no-interaction
+      - name: Install framework with plugin extras
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          cd biolm_utils
+          sed -i 's|/home/pwiesenbach/rna_saluki_cnn|../rna_saluki_cnn|g' pyproject.toml
+          sed -i 's|/home/pwiesenbach/rna_protein_xlnet|../rna_protein_xlnet|g' pyproject.toml
+          poetry lock --no-update
+          poetry install --no-interaction --with plugins
+      - name: Run plugin discovery tests
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          cd biolm_utils
+          poetry run pytest -xvs tests/integration/test_plugin_discovery.py
+
+  lockfile-sync:
+    name: Verify poetry.lock is in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry --version
+      - name: Verify lockfile
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry lock --no-interaction --no-update
+          if [ -n "$(git status --porcelain --untracked-files=no -- poetry.lock)" ]; then
+            echo "poetry.lock is out-of-sync with pyproject.toml. Run 'poetry lock' and commit the changed poetry.lock file." >&2
+            git --no-pager diff --no-color --name-only -- poetry.lock || true
+            exit 1
+          fi
