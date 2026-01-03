@@ -151,6 +151,14 @@ Run any mode with:
 poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --config-path ./my_experiment
 ```
 
+## 🧭 Execution Flow (at a glance)
+
+1. CLI parses args and Hydra composes configs.
+2. `plugin_registry` resolves the plugin entry point; plugin config classes are loaded.
+3. Data is loaded/prepared (tokenizer built or loaded); datasets are cached under `${outputpath}/{mode}`.
+4. Mode dispatcher (`runner`) calls the appropriate trainer/evaluator.
+5. Artifacts and logs are written to `${outputpath}/{mode}`; MLflow (if enabled) logs params/metrics/artifacts to `${outputpath}/mlruns`.
+
 ---
 
 ## 🔌 Available Plugins
@@ -193,6 +201,8 @@ biolm/conf
 - **`inference.pretrainedmodel`**: Checkpoint path required for `predict` and `interpret`.
 - **`inference.looscores.*`**: `handletokens` (`mask`/`remove`), `replacementdict` (limit substitutions), `replacespecifier` (include sequence specifier fields).
 - **`mlflow.enabled`**, **`mlflow.tracking_uri`**: Toggle tracking and set the MLflow artifact store (default `${outputpath}/mlruns`).
+
+**Hardware note:** XLNet-style LMs are GPU-oriented; Saluki CNN can run on CPU but is faster on GPU. The framework will pick GPU if available (`gpu.py`) and fall back to CPU.
 
 ### Example Configuration File
 
@@ -279,6 +289,13 @@ output/
 - **Prediction Outputs**: `output/predict/test_predictions.csv` plus logs in `output/predict/logs/`.
 - **Interpretation Outputs**: `output/interpret/loo_scores_<handletokens>.csv` and `.pkl` plus logs in `output/interpret/logs/`.
 - **MLflow Logs**: Stored in `output/mlruns/` (params/metrics/artifacts per run).
+
+### Artifact contents (what to expect)
+
+- **Checkpoints**: Saved under `${outputpath}/pre-train` and `${outputpath}/fine-tune` (plugin-specific filenames). Reuse them by pointing `inference.pretrainedmodel` (for predict/interpret) or `model_load_path` (for continued training).
+- **`test_predictions.csv`**: Typically includes sample identifiers plus plugin-specific scores/probabilities; labels may appear if available. Schemas can differ by plugin—consult the plugin README for exact columns.
+- **`loo_scores_<handletokens>.csv` / `.pkl`**: Per-position leave-one-out scores; includes sequence IDs, positions, tokens, and plugin-specific score deltas. The `<handletokens>` suffix reflects the occlusion strategy (`mask`/`remove`).
+- **MLflow run folders**: Contain `params`, `metrics`, and `artifacts` (including checkpoints and logs). MLflow UI can browse and download these directly.
 
 ---
 
