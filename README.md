@@ -3,7 +3,7 @@
 # `biolm_utils`: A Framework for Bioinformatical Language Models
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/dieterich-lab/biolm_utils)
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](README.md)
 
 This project implements pre-training and fine-tuning of neural models for regressing half-lives of RNA and protein sequences. In addition, it supports the extraction of leave-one-out (LOO) scores for fine-tuned models to analyze importance scores of individual inputs.
@@ -307,7 +307,7 @@ We have several exciting features and improvements planned for future releases:
 - [ ] Extended documentation with Jupyter notebook tutorials
 - [ ] REST API for model inference
 
-Community contributions are welcome! Please see our [contribution guidelines](CONTRIBUTING.md) for more information.
+Community contributions are welcome! If you have ideas for improvements or would like to contribute, please open an issue or pull request on GitHub.
 
 ## Contributing
 
@@ -323,7 +323,7 @@ We welcome contributions from the community! Whether it's bug reports, feature r
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. For more information, please refer to the repository.
 
 ## Citation
 
