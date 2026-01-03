@@ -30,7 +30,7 @@ A modular PyTorch framework for training language models on biological sequences
 - Python 3.10+
 - Poetry ([install guide](https://python-poetry.org/docs/#installation))
 
-**Framework Installation:**
+**Framework Installation (no plugins yet):**
 ```bash
 git clone https://github.com/dieterich-lab/biolm_utils.git
 cd biolm_utils
@@ -38,12 +38,25 @@ git checkout biolm-2.0
 ./install.sh
 ```
 
+`install.sh` installs only the BioLM framework. Plugins are installed separately (see below).
+
 **Adding Plugins:**
-Install plugins using the CLI:
-```bash
-poetry run biolm install-plugin <path-or-git-url>
-poetry run biolm list-plugins
-```
+
+- **Standard (user) install — clones into `./plugins/`**
+  ```bash
+  poetry run biolm install-plugin <path-or-git-url>
+  poetry run biolm list-plugins
+  ```
+  `install-plugin` will clone the plugin repo into `./plugins/<name>` inside this project and install it in editable mode. Use this flow if you just need to run the plugin without editing its source elsewhere.
+
+- **Developer install — track your upstream repo live**
+  ```bash
+  poetry add --editable /absolute/path/to/rna_saluki_cnn
+  poetry add --editable /absolute/path/to/rna_protein_xlnet
+  ```
+  This wires the Poetry environment directly to your existing plugin repos (no copies under `./plugins`). Edits you make in those repos are immediately picked up when running BioLM.
+
+If you previously used `install-plugin` and no longer want the cloned copies, you can safely remove the `./plugins` directory; the CLI will recreate it on demand for future user installs.
 
 ---
 
