@@ -127,7 +127,7 @@ poetry run biolm predict --config-path ./my_experiment inference.pretrainedmodel
 
 - Ensure `inference.pretrainedmodel` is set to the checkpoint produced by fine-tuning or pre-training.
 - Optional overrides: `inference.looscores.handletokens` (defaults to `mask` here), `debugging.dev` for quick dry-runs.
-- Output: prediction CSVs in `${outputpath}/predict`.
+- Output: `${outputpath}/predict/test_predictions.csv` (IDs plus plugin-specific scores/probabilities) and logs in `${outputpath}/predict/logs/`.
 
 **Interpret**
 
@@ -140,7 +140,7 @@ poetry run biolm interpret --config-path ./my_experiment inference.pretrainedmod
   - `replacementdict`: dictionary limiting replacements per token; leave `null` for full masking.
   - `replacespecifier`: boolean to include sequence specifier fields in replacements.
 - Other useful flags: `debugging.dev` to restrict the number of samples, `training.batchsize` for occlusion batching.
-- Output: LOO scores saved as CSV and pickle in `${outputpath}/interpret`.
+- Output: `${outputpath}/interpret/loo_scores_<handletokens>.csv` and `.pkl` plus logs in `${outputpath}/interpret/logs/`.
 
 ---
 
@@ -185,17 +185,14 @@ biolm/conf
 │   └── interpret.yaml   # Interpretation-specific settings
 ```
 
-### Important Configuration Settings
+### Important Configuration Settings (suggested order)
 
-- **`data_source.columnsep`**: Specifies the delimiter for input files (default: `\t`).
-- **`data_source.splitratio`**: Defines the train/validation/test split ratios.
-- **`training.nepochs`**: Number of training epochs (default: 100).
-- **`training.batchsize`**: Batch size for training and interpretation batches (default: 8; interpret mode reads this value).
-- **`mlflow.enabled`**: Enables MLflow tracking (default: `true`).
-- **`mlflow.tracking_uri`**: Directory for MLflow logs (default: `${outputpath}/mlruns`).
-- **`inference.looscores.handletokens`**: How LOO occlusion handles tokens (`mask`, `remove`, or `null` to disable).
-- **`inference.looscores.replacementdict`**: Restricts replacements to specific token sets for interpret mode (default: `null`).
-- **`inference.looscores.replacespecifier`**: Toggles replacement of sequence specifiers during interpretation (`false` by default).
+- **`plugin`**, **`task`**, **`outputpath`**: Select the installed plugin, set `classification` or `regression`, and choose where artifacts are written.
+- **`data_source.filepath`**, **`data_source.columnsep`**, **`data_source.splitratio`**: Point to the data file, delimiter (default `\t`), and splits.
+- **`training.nepochs`**, **`training.batchsize`**, **`training.blocksize`**: Core training knobs; `training.batchsize` is also used by interpret.
+- **`inference.pretrainedmodel`**: Checkpoint path required for `predict` and `interpret`.
+- **`inference.looscores.*`**: `handletokens` (`mask`/`remove`), `replacementdict` (limit substitutions), `replacespecifier` (include sequence specifier fields).
+- **`mlflow.enabled`**, **`mlflow.tracking_uri`**: Toggle tracking and set the MLflow artifact store (default `${outputpath}/mlruns`).
 
 ### Example Configuration File
 
@@ -279,7 +276,9 @@ output/
 - **Tokenizer**: Located in `output/tokenize/`.
 - **Trained Models**: Found in `output/pre-train/` or `output/fine-tune/`.
 - **Training Results**: Logs and metrics are in `output/fine-tune/logs/`.
-- **Prediction Outputs**: Stored in `output/predict/`.
+- **Prediction Outputs**: `output/predict/test_predictions.csv` plus logs in `output/predict/logs/`.
+- **Interpretation Outputs**: `output/interpret/loo_scores_<handletokens>.csv` and `.pkl` plus logs in `output/interpret/logs/`.
+- **MLflow Logs**: Stored in `output/mlruns/` (params/metrics/artifacts per run).
 
 ---
 
