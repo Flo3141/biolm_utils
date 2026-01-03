@@ -49,12 +49,15 @@ git checkout biolm-2.0
   ```
   `install-plugin` will clone the plugin repo into `./plugins/<name>` inside this project and install it in editable mode. Use this flow if you just need to run the plugin without editing its source elsewhere.
 
-- **Developer install — track your upstream repo live**
+- **Developer install — keep framework metadata clean**
   ```bash
-  poetry add --editable /absolute/path/to/rna_saluki_cnn
-  poetry add --editable /absolute/path/to/rna_protein_xlnet
+  # inside the biolm_utils repo
+  poetry install --no-interaction --with dev
+  # install your local plugin(s) into the env without touching pyproject
+  poetry run pip install -e /absolute/path/to/rna_saluki_cnn
+  poetry run pip install -e /absolute/path/to/rna_protein_xlnet
   ```
-  This wires the Poetry environment directly to your existing plugin repos (no copies under `./plugins`). Edits you make in those repos are immediately picked up when running BioLM.
+  This keeps `pyproject.toml` unchanged. Edits in your plugin repos are picked up immediately by the editable install. To remove, run `poetry run pip uninstall <plugin-name>`.
 
 If you previously used `install-plugin` and no longer want the cloned copies, you can safely remove the `./plugins` directory; the CLI will recreate it on demand for future user installs.
 
