@@ -54,8 +54,7 @@ git checkout biolm-2.0
   # inside the biolm_utils repo
   poetry install --no-interaction --with dev
   # install your local plugin(s) into the env without touching pyproject
-  poetry run pip install -e /absolute/path/to/rna_saluki_cnn
-  poetry run pip install -e /absolute/path/to/rna_protein_xlnet
+  poetry run pip install -e /path/to/your/plugin
   ```
   This keeps `pyproject.toml` unchanged. Edits in your plugin repos are picked up immediately by the editable install. To remove, run `poetry run pip uninstall <plugin-name>`.
 
@@ -80,7 +79,7 @@ seq_002     2.3      a,t,g,c,a,g,t,c,...
 | Mode         | Description                                                                 | Typical Use/Plugin         |
 |--------------|-----------------------------------------------------------------------------|---------------------------|
 | tokenize     | Build vocabulary/tokenizer from data.                                       | All models                |
-| pre-train    | (Optional) Pre-train language model on unlabeled data.                      | Required for LMs (XLNet)  |
+| pre-train    | (Optional) Pre-train language model on unlabeled data.                      | Required for LMs          |
 | fine-tune    | Train model on labeled data for your task.                                  | All models                |
 | predict      | Run inference/prediction on new data.                                       | All models                |
 | interpret    | Feature importance/interpretation (e.g., saliency, attention, etc.).        | All models                |
@@ -164,7 +163,7 @@ poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --conf
 
 ## ⚡ Quickstart Examples
 
-- **Saluki (CNN, no pre-train, CPU ok)**
+- **Saluki**
   ```bash
   # minimal config (saluki_quick.yaml)
   plugin: rna_saluki_cnn
@@ -183,7 +182,7 @@ poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --conf
   ```
   Run: `poetry run biolm fine-tune --config-path . --config-name saluki_quick`
 
-- **XLNet (needs pre-train, GPU recommended)**
+- **XLNet**
   ```bash
   # minimal config (xlnet_quick.yaml)
   plugin: rna_protein_xlnet
@@ -226,21 +225,6 @@ BioLM uses Hydra for flexible configuration. Compose configs from multiple files
 poetry run biolm fine-tune --config-path ./my_experiment training.nepochs=50
 ```
 
-### Default Configuration Structure
-
-BioLM provides a default configuration structure:
-
-```plaintext
-biolm/conf
-├── config.yaml          # Base configuration
-├── mode
-│   ├── tokenize.yaml    # Tokenization-specific settings
-│   ├── pre-train.yaml   # Pre-training-specific settings
-│   ├── fine-tune.yaml   # Fine-tuning-specific settings
-│   ├── predict.yaml     # Prediction-specific settings
-│   └── interpret.yaml   # Interpretation-specific settings
-```
-
 ### Important Configuration Settings (suggested order)
 
 - **`plugin`**, **`task`**, **`outputpath`**: Select the installed plugin, set `classification` or `regression`, and choose where artifacts are written.
@@ -249,10 +233,6 @@ biolm/conf
 - **`inference.pretrainedmodel`**: Checkpoint path required for `predict` and `interpret`.
 - **`inference.looscores.*`**: `handletokens` (`mask`/`remove`), `replacementdict` (limit substitutions), `replacespecifier` (include sequence specifier fields).
 - **`mlflow.enabled`**, **`mlflow.tracking_uri`**: Toggle tracking and set the MLflow artifact store (default `${outputpath}/mlruns`).
-
-**Hardware note:** XLNet-style LMs are GPU-oriented; Saluki CNN can run on CPU but is faster on GPU. The framework will pick GPU if available (`gpu.py`) and fall back to CPU.
-
-**Why Hydra plus PluginConfig/Config?** Hydra powers user-facing composition/overrides, while `PluginConfig`/`Config` give plugin authors a typed place to declare model/dataset/tokenizer defaults and allow programmatic registration (tests, programmatic runs). We keep both to balance UX and plugin ergonomics.
 
 **Sample data for quickstarts:** Both quickstarts use the bundled `examples/data/quickstart_sequences.tsv` (tab-separated, columns: id, label, sequence) so they run out-of-the-box without the plugin repos checked out.
 
@@ -324,26 +304,34 @@ poetry run biolm fine-tune --config-name custom_training --config-path ./my_expe
 
 The framework organizes outputs in the following structure:
 
-```
+```plaintext
 output/
-├── tokenize/          # Tokenizer files (HuggingFace format)
-├── pre-train/         # Pre-trained models
-├── fine-tune/         # Fine-tuned models and logs
-├── predict/           # Prediction outputs
-├── interpret/         # Interpretation results
-└── mlruns/            # MLflow logs and artifacts
+├── tokenize/
+│   ├── vocab.json           # Tokenizer vocabulary
+│   └── merges.txt           # Merge rules (if BPE)
+├── pre-train/
+│   ├── checkpoint-XX/       # Checkpoint folders
+│   ├── model.safetensors    # Final model weights
+│   ├── config.json          # Model configuration
+│   └── logs/                # Training logs
+├── fine-tune/
+│   ├── checkpoint-XX/       # Checkpoint folders
+│   ├── model.safetensors    # Fine-tuned model weights
+│   ├── all_results.json     # Aggregated metrics
+│   ├── test_predictions.csv # Predictions on test set
+│   └── logs/                # Training logs
+├── predict/
+│   ├── test_predictions.csv # Model predictions
+│   └── logs/                # Execution logs
+├── interpret/
+│   ├── loo_scores.csv       # Feature importance scores
+│   └── logs/                # Execution logs
+└── mlruns/                  # MLflow tracking data
 ```
-
-- **Tokenizer**: Located in `output/tokenize/`.
-- **Trained Models**: Found in `output/pre-train/` or `output/fine-tune/`.
-- **Training Results**: Logs and metrics are in `output/fine-tune/logs/`.
-- **Prediction Outputs**: `output/predict/test_predictions.csv` plus logs in `output/predict/logs/`.
-- **Interpretation Outputs**: `output/interpret/loo_scores_<handletokens>.csv` and `.pkl` plus logs in `output/interpret/logs/`.
-- **MLflow Logs**: Stored in `output/mlruns/` (params/metrics/artifacts per run).
 
 ### Artifact contents (what to expect)
 
-- **Checkpoints**: Saved under `${outputpath}/pre-train` and `${outputpath}/fine-tune` (plugin-specific filenames). Reuse them by pointing `inference.pretrainedmodel` (for predict/interpret) or `model_load_path` (for continued training).
+- **Checkpoints**: Saved under `${outputpath}/pre-train` and `${outputpath}/fine-tune` (plugin-specific filenames, e.g., `model.safetensors`). Reuse them by pointing `inference.pretrainedmodel` (for predict/interpret) or `model_load_path` (for continued training).
 - **`test_predictions.csv`**: Typically includes sample identifiers plus plugin-specific scores/probabilities; labels may appear if available. Schemas can differ by plugin—consult the plugin README for exact columns.
 - **`loo_scores_<handletokens>.csv` / `.pkl`**: Per-position leave-one-out scores; includes sequence IDs, positions, tokens, and plugin-specific score deltas. The `<handletokens>` suffix reflects the occlusion strategy (`mask`/`remove`).
 - **MLflow run folders**: Contain `params`, `metrics`, and `artifacts` (including checkpoints and logs). MLflow UI can browse and download these directly.
