@@ -26,10 +26,12 @@ A modular PyTorch framework for training language models on biological sequences
 ## 🚀 Installation
 
 **Requirements:**
+
 - Python 3.10+
 - Poetry ([install guide](https://python-poetry.org/docs/#installation))
 
 **Framework Installation (no plugins yet):**
+
 ```bash
 git clone https://github.com/dieterich-lab/biolm_utils.git
 cd biolm_utils
@@ -42,19 +44,23 @@ git checkout biolm-2.0
 **Adding Plugins:**
 
 - **Standard (user) install — clones into `./plugins/`**
+
   ```bash
   poetry run biolm install-plugin <path-or-git-url>
   poetry run biolm list-plugins
   ```
+
   `install-plugin` will clone the plugin repo into `./plugins/<name>` inside this project and install it in editable mode. Use this flow if you just need to run the plugin without editing its source elsewhere.
 
 - **Developer install — keep framework metadata clean**
+
   ```bash
   # inside the biolm_utils repo
   poetry install --no-interaction --with dev
   # install your local plugin(s) into the env without touching pyproject
   poetry run pip install -e /path/to/your/plugin
   ```
+
   This keeps `pyproject.toml` unchanged. Edits in your plugin repos are picked up immediately by the editable install. To remove, run `poetry run pip uninstall <plugin-name>`.
 
 If you previously used `install-plugin` and no longer want the cloned copies, you can safely remove the `./plugins` directory; the CLI will recreate it on demand for future user installs.
@@ -65,7 +71,7 @@ If you previously used `install-plugin` and no longer want the cloned copies, yo
 
 Input files must specify the delimiter using the `data_source.columnsep` configuration. By default, the delimiter is set to tab (`\t`). Example (tab-separated columns, raw sequence text):
 
-```
+```tsv
 ID	Label	Sequence
 seq_001	1.5	AUGCUAGCUAGC
 seq_002	2.3	AUGGCUAUGGCU
@@ -84,6 +90,7 @@ seq_002	2.3	AUGGCUAUGGCU
 | interpret    | Feature importance/interpretation (e.g., saliency, attention, etc.).        | All models                |
 
 **Notes:**
+
 - Language models (e.g., XLNet) require pre-training before fine-tuning.
 - CNN-based models (e.g., Saluki) do **not** require pre-training.
 
@@ -148,6 +155,7 @@ poetry run biolm interpret --config-path ./my_experiment inference.pretrainedmod
 ## 🛠️ Usage
 
 Run any mode with:
+
 ```bash
 poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --config-path ./my_experiment
 ```
@@ -163,6 +171,7 @@ poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --conf
 ## ⚡ Quickstart Examples
 
 - **Saluki**
+
   ```bash
   # minimal config (saluki_quick.yaml)
   plugin: rna_saluki_cnn
@@ -179,9 +188,11 @@ poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --conf
     nepochs: 3
     batchsize: 4
   ```
+
   Run: `poetry run biolm fine-tune --config-path . --config-name saluki_quick`
 
 - **XLNet**
+
   ```bash
   # minimal config (xlnet_quick.yaml)
   plugin: rna_protein_xlnet
@@ -199,6 +210,7 @@ poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --conf
     batchsize: 2
     blocksize: 256
   ```
+
   Run sequence:
   1) `poetry run biolm tokenize --config-path . --config-name xlnet_quick`
   2) `poetry run biolm pre-train --config-path . --config-name xlnet_quick`
@@ -343,9 +355,11 @@ BioLM integrates with MLflow for experiment tracking. To enable MLflow:
 
 1. Set `mlflow.enabled: true` in the configuration.
 2. Access the MLflow UI:
+
    ```bash
    poetry run mlflow ui --backend-store-uri output/mlruns
    ```
+
 3. Download artifacts (e.g., models, logs) directly from the UI.
 
 ---
@@ -357,17 +371,20 @@ See [docs/PLUGIN_CONTRACT.md](docs/PLUGIN_CONTRACT.md) for the required entry po
 ## 🧪 Testing
 
 Run tests with:
+
 ```bash
 poetry run pytest tests/
 ```
 
 For specific suites:
+
 ```bash
 poetry run pytest tests/integration/      # Plugin system tests
 poetry run pytest tests/test_*.py         # Unit tests
 ```
 
 With coverage:
+
 ```bash
 poetry run pytest --cov=biolm --cov-report=html
 ```
