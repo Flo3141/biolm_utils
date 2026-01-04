@@ -391,7 +391,7 @@ poetry run pytest --cov=biolm --cov-report=html
 ```bibtex
 @software{biolm2024,
   title = {BioLM 2.0: A Modular Framework for Biological Language Models},
-  author = {Dieterich Lab},
+  author = {Philipp Wiesenbach},
   year = {2024},
   url = {https://github.com/dieterich-lab/biolm_utils}
 }
