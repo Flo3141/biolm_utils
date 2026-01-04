@@ -11,10 +11,7 @@ from transformers.trainer import Trainer
 from .config_access import ConfigManager
 from .params import get_detected_ngpus
 from .path_setup import PathsManager
-from .train_utils import (
-    compute_metrics_for_classification,
-    compute_metrics_for_regression,
-)
+from .metrics import compute_metrics_for_classification, compute_metrics_for_regression
 from .trainer import (
     RegressionTrainer,
     WeightedRegressionTrainer,
