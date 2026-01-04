@@ -8,6 +8,7 @@ def test_model_log_and_reload(tmp_path):
     # configure a local file-based mlflow store for the test
     tracking_uri = f"file://{tmp_path / 'mlruns'}"
     mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_experiment("default")
 
     X, y = make_regression(n_samples=20, n_features=3, noise=0.1, random_state=0)
     model = LinearRegression().fit(X, y)

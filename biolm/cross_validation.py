@@ -455,7 +455,7 @@ def parametrized_decorator(params, dataset):
         def wrapper(*args, **kwargs):
             from .path_setup import PathsManager
 
-            paths = PathsManager.get_paths()
+            paths = PathsManager.get_paths(config=params)
             base_paths = Paths(
                 model_load_path=paths["MODELLOADPATH"],
                 model_save_path=paths["MODELSAVEPATH"],

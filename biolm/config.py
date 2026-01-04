@@ -9,4 +9,4 @@ def get_config():
 
 def set_config(config: Config):
     """Legacy setter; prefer threading config explicitly."""
-    ConfigManager._instance = config
+    ConfigManager.set_config(config)

@@ -49,8 +49,17 @@ def _adjust_paths_for_pretrained_model(
 
 
 def _resolve_config(args=None):
-    """Return provided args or fall back to the deprecated ConfigManager."""
-    return args if args is not None else ConfigManager.get_config()
+    """Return provided args or a previously injected config."""
+
+    if args is not None:
+        return args
+
+    if ConfigManager._instance is not None:
+        return ConfigManager.get_config()
+
+    raise RuntimeError(
+        "PathsManager requires a config. Call initialize_runtime(config) first or provide args explicitly."
+    )
 
 
 def setup_paths(args=None) -> Dict[str, Optional[Path]]:

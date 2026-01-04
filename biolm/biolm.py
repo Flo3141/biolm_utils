@@ -22,10 +22,9 @@ from .cross_validation import CrossValidator
 from .path_setup import PathsManager
 from .plugin_config import PluginManager
 
-args = ConfigManager.get_config()
-# Avoid logging params during early import; the CLI reinitializes and logs once.
-constants = get_constants(log_params=False)
-paths = PathsManager.get_paths()
+args = None
+constants = None
+paths = None
 from .interpret import loo_scores
 from .params import get_detected_ngpus
 from .paths import Paths
@@ -40,7 +39,7 @@ from .train_utils import (
 )
 
 
-def initialize_runtime(config):
+def initialize_runtime(config, log_params: bool = False):
     """Propagate Hydra config to module-level singletons and caches."""
     global args, constants, paths
 
@@ -53,8 +52,30 @@ def initialize_runtime(config):
 
     reset_constants()
     args = config
-    constants = _get_constants(args=config)
+    constants = _get_constants(args=config, log_params=log_params)
     paths = PathsManager.get_paths(config=config)
+
+
+def ensure_runtime(config=None, *, log_params: bool = False):
+    """Ensure global runtime state is initialized, using provided or default config."""
+
+    global args
+
+    if config is not None:
+        if args is None or args is not config:
+            initialize_runtime(config, log_params=log_params)
+        return
+
+    if args is not None:
+        return
+
+    if ConfigManager._instance is not None:
+        initialize_runtime(ConfigManager._instance, log_params=log_params)
+        return
+
+    raise RuntimeError(
+        "Runtime is not initialized. Call initialize_runtime(config) before invoking training or testing utilities."
+    )
 
 
 # --- Configuration & Setup ---
@@ -206,6 +227,7 @@ def train(
     config,
 ):
     """Handles the model training loop."""
+    ensure_runtime(config)
     trainer_cls = _get_trainer_class(args.mode, args.task)
     num_labels = _get_num_labels(args.mode, args.task, full_dataset)
 
@@ -355,6 +377,7 @@ def test(
     model,
 ):
     """Handles the model testing and prediction."""
+    ensure_runtime(config)
     trainer_cls = _get_trainer_class(args.mode, args.task)
 
     if model is None:

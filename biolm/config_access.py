@@ -1,17 +1,22 @@
 """Compatibility shim for legacy ConfigManager access.
 
 Prefer threading Hydra configs explicitly; this singleton remains only for
-backward compatibility.
+backward compatibility when tests or legacy entry points inject a config
+programmatically.
 """
 
 import warnings
 from typing import Any
 
-from .loader import load_config
-
 
 class ConfigManager:
     _instance: Any = None
+
+    @classmethod
+    def set_config(cls, config: Any):
+        """Seed the singleton without triggering Hydra loads (for tests/legacy)."""
+
+        cls._instance = config
 
     @classmethod
     def get_config(cls):
@@ -21,7 +26,10 @@ class ConfigManager:
             stacklevel=2,
         )
         if cls._instance is None:
-            cls._instance = load_config()
+            raise RuntimeError(
+                "ConfigManager has no active config. Call initialize_runtime(config) "
+                "from biolm.biolm or explicitly inject via ConfigManager.set_config() in tests."
+            )
         return cls._instance
 
     @classmethod

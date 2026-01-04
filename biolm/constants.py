@@ -9,9 +9,9 @@ from omegaconf import DictConfig, OmegaConf
 from transformers.trainer import Trainer
 
 from .config_access import ConfigManager
+from .metrics import compute_metrics_for_classification, compute_metrics_for_regression
 from .params import get_detected_ngpus
 from .path_setup import PathsManager
-from .metrics import compute_metrics_for_classification, compute_metrics_for_regression
 from .trainer import (
     RegressionTrainer,
     WeightedRegressionTrainer,
@@ -20,8 +20,17 @@ from .trainer import (
 
 
 def _resolve_config(args=None):
-    """Return provided args or fall back to the deprecated ConfigManager."""
-    return args if args is not None else ConfigManager.get_config()
+    """Return provided args or a previously injected config."""
+
+    if args is not None:
+        return args
+
+    if ConfigManager._instance is not None:
+        return ConfigManager.get_config()
+
+    raise RuntimeError(
+        "Constants require a config. Call initialize_runtime(config) first or pass args explicitly."
+    )
 
 
 def setup_constants(log_params: bool = True, args=None):
