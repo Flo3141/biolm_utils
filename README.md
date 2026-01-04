@@ -160,6 +160,8 @@ Run any mode with:
 poetry run biolm {tokenize | pre-train | fine-tune | predict | interpret} --config-path ./my_experiment
 ```
 
+Always pass an explicit `--config-path`/`--config-name`; runtime initialization no longer relies on implicit defaults.
+
 ## 🧭 Execution Flow (at a glance)
 
 1. CLI parses args and Hydra composes configs.
@@ -361,6 +363,8 @@ BioLM integrates with MLflow for experiment tracking. To enable MLflow:
    ```
 
 3. Download artifacts (e.g., models, logs) directly from the UI.
+
+Tracking is scoped to each run’s `outputpath` (default `${outputpath}/mlruns`) rather than a global store; set `mlflow.tracking_uri` if you want a shared backend.
 
 ---
 
