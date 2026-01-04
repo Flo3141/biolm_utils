@@ -1,5 +1,4 @@
 > **Note:** The `biolm-2.0` branch contains the latest, actively developed version of BioLM with major improvements and a new plugin architecture. The `main` branch is legacy. For the newest features and code, please [switch to the `biolm-2.0` branch](https://github.com/dieterich-lab/biolm_utils/tree/biolm-2.0).
-> **Note:** The `biolm-2.0` branch contains the latest, actively developed version of BioLM with major improvements and a new plugin architecture. The `main` branch is legacy. For the newest features and code, please [switch to the `biolm-2.0` branch](https://github.com/dieterich-lab/biolm_utils/tree/biolm-2.0).
 
 # BioLM 2.0 Framework
 
@@ -64,12 +63,12 @@ If you previously used `install-plugin` and no longer want the cloned copies, yo
 
 ## 📊 Data Format
 
-Input files must specify the delimiter using the `data_source.columnsep` configuration. By default, the delimiter is set to tab (`\t`). Example:
+Input files must specify the delimiter using the `data_source.columnsep` configuration. By default, the delimiter is set to tab (`\t`). Example (tab-separated columns, raw sequence text):
 
 ```
-ID          Label    Sequence
-seq_001     1.5      a,t,g,c,a,g,t,c,...
-seq_002     2.3      a,t,g,c,a,g,t,c,...
+ID	Label	Sequence
+seq_001	1.5	AUGCUAGCUAGC
+seq_002	2.3	AUGGCUAUGGCU
 ```
 
 ---
@@ -234,7 +233,7 @@ poetry run biolm fine-tune --config-path ./my_experiment training.nepochs=50
 - **`inference.looscores.*`**: `handletokens` (`mask`/`remove`), `replacementdict` (limit substitutions), `replacespecifier` (include sequence specifier fields).
 - **`mlflow.enabled`**, **`mlflow.tracking_uri`**: Toggle tracking and set the MLflow artifact store (default `${outputpath}/mlruns`).
 
-**Sample data for quickstarts:** Both quickstarts use the bundled `examples/data/quickstart_sequences.tsv` (tab-separated, columns: id, label, sequence) so they run out-of-the-box without the plugin repos checked out.
+**Sample data for quickstarts:** Both quickstarts use the bundled `examples/data/quickstart_sequences.tsv` (tab-separated, columns: id, label, sequence; 100 rows) so they run out-of-the-box and can split cleanly without the plugin repos checked out.
 
 ### Example Configuration File
 
