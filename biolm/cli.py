@@ -32,22 +32,6 @@ def _hydra_main(cfg: DictConfig):
     # Set the config for the framework to use
     from .biolm import initialize_runtime
 
-    # Set MLflow defaults if enabled
-    if (
-        processed_config.settings
-        and hasattr(processed_config.settings, "mlflow")
-        and processed_config.settings.mlflow
-        and processed_config.settings.mlflow.get("enabled", False)
-    ):
-        if processed_config.settings.mlflow.get("tracking_uri") is None:
-            processed_config.settings.mlflow["tracking_uri"] = (
-                f"{processed_config.outputpath}/{processed_config.mode}/mlruns"
-            )
-        if processed_config.settings.mlflow.get("experiment_name") is None:
-            processed_config.settings.mlflow["experiment_name"] = (
-                f"{processed_config.mode}_{processed_config.outputpath.split('/')[-1]}"
-            )
-
     # Reset cached module-level state to use the new config
     initialize_runtime(processed_config)
 

@@ -7,7 +7,11 @@ from pathlib import Path
 
 
 def install_plugin(url: str, target_dir: str = "plugins"):
-    """Clone and install a plugin from a git URL."""
+    """Clone and install a plugin from a git URL using editable pip install.
+
+    Keeps the host project's pyproject.toml unchanged; installs into the
+    current environment via `pip install -e`.
+    """
     # Derive directory name from URL
     repo_name = url.split("/")[-1]
     if repo_name.endswith(".git"):
@@ -28,30 +32,13 @@ def install_plugin(url: str, target_dir: str = "plugins"):
             print(f"Error cloning repository: {e}")
             sys.exit(1)
 
-    print(f"Installing {repo_name} in editable mode...")
+    print(f"Installing {repo_name} in editable mode (pip -e)...")
     try:
-        # Check if we are in a poetry project
-        use_poetry = False
-        if Path("pyproject.toml").exists():
-            try:
-                subprocess.check_call(
-                    ["poetry", "--version"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                use_poetry = True
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                pass
-
-        if use_poetry:
-            print("Detected Poetry project. Installing via 'poetry add'...")
-            subprocess.check_call(["poetry", "add", "--editable", f"./{plugin_path}"])
-        else:
-            # Use the current executable to ensure we install into the same environment
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "-e", str(plugin_path)]
-            )
-        print(f"Successfully installed {repo_name}.")
+        # Use the current interpreter to install into the active environment
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "-e", str(plugin_path)]
+        )
+        print(f"Successfully installed {repo_name} without modifying pyproject.toml.")
     except subprocess.CalledProcessError as e:
         print(f"Error installing plugin: {e}")
         sys.exit(1)

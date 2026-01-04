@@ -201,10 +201,6 @@ def load_config(overrides: Optional[List[str]] = None) -> BioLMConfig:
                     cfg.data_source.filepath = ov.split("=", 1)[1]
                     break
 
-            print("DEBUG: data_source.splitratio:", cfg.data_source.splitratio)
-            print("DEBUG: mode:", cfg.mode)
-            print("DEBUG: data_source.filepath:", cfg.data_source.filepath)
-
             return _process_hydra_config(cfg)
     finally:
         GlobalHydra.instance().clear()

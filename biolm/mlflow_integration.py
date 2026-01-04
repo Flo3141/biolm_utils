@@ -18,6 +18,30 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
+def _with_mlflow_defaults(args: Any, mlflow_conf: Dict[str, Any]) -> Dict[str, Any]:
+    """Fill in tracking_uri/experiment_name defaults using args when missing.
+
+    Keeps mutations local (returns a shallow copy) so callers don't alter the
+    original Hydra config.
+    """
+
+    conf = dict(mlflow_conf) if mlflow_conf else {}
+    output_path = getattr(args, "outputpath", None)
+    mode = getattr(args, "mode", None)
+
+    if conf.get("tracking_uri") is None and output_path and mode:
+        conf["tracking_uri"] = f"{output_path}/{mode}/mlruns"
+
+    if conf.get("experiment_name") is None:
+        if output_path:
+            tail = Path(str(output_path)).name
+            conf["experiment_name"] = f"{mode}_{tail}" if mode else tail
+        elif mode:
+            conf["experiment_name"] = f"biolm-{mode}"
+
+    return conf
+
+
 class MLflowNotInstalled(Exception):
     pass
 
@@ -76,6 +100,8 @@ def start_mlflow_run(
         yield None
         return
 
+    mlflow_conf = _with_mlflow_defaults(args, mlflow_conf)
+
     mlflow = _import_mlflow()
 
     # configure tracking uri if set
@@ -92,8 +118,6 @@ def start_mlflow_run(
         # Default to last directory of outputpath if available, else mode-based name
         output_path = getattr(args, "outputpath", None)
         if output_path:
-            from pathlib import Path
-
             experiment_name = Path(str(output_path)).name
         else:
             experiment_name = f"biolm-{args.mode}"
