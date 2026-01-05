@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from biolm.rna_datasets import RNABaseDataset
+from biolm.biolm_dataset import RNABaseDataset
 from biolm.train_utils import IdentityScaler, LogScaler, get_model_and_config
 
 

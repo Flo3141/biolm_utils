@@ -11,7 +11,7 @@ from tokenizers.pre_tokenizers import Sequence, Split, WhitespaceSplit
 from tokenizers.processors import BertProcessing
 
 from .path_setup import PathsManager
-from .rna_datasets import RNABaseDataset
+from .biolm_dataset import RNABaseDataset
 
 # UNIREFSIZE = 152_670_237
 

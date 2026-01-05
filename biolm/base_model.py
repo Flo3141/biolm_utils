@@ -1,33 +1,20 @@
-"""Base classes for plugin models in biolm.
+"""Backward-compatible re-exports.
 
-Plugins should subclass these for consistency and to leverage framework hooks.
-
-Note:
-    This module was introduced to replace the misleadingly named `base_dataset.py`,
-    which historically contained model base classes.
+Historically the framework exposed a base model class as `biolm.base_model.BaseModel`.
+New code should import from `biolm.biolm_model` instead.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict
+import warnings
 
-from transformers import PretrainedConfig, PreTrainedModel
+from .biolm_model import BaseModel
 
 
-class BaseModel(PreTrainedModel):
-    """Base model class for plugins.
+warnings.warn(
+    "`biolm.base_model` is deprecated; import `BioLMModel`/`BaseModel` from `biolm.biolm_model` instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    Provides common hooks and ensures HuggingFace compatibility.
-    """
-
-    def __init__(self, config: PretrainedConfig):
-        super().__init__(config)
-
-    @classmethod
-    def get_config(cls, **kwargs) -> PretrainedConfig:
-        """Return a config for this model. Override in subclasses."""
-        raise NotImplementedError
-
-    def preprocess_batch(self, batch: Dict[str, Any]) -> Dict[str, Any]:
-        """Hook for batch preprocessing. Override if needed."""
-        return batch
+__all__ = ["BaseModel"]
