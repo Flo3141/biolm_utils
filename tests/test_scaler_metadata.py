@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from biolm.biolm_dataset import RNABaseDataset
+from biolm.biolm_dataset import BioLMDataset
 from biolm.train_utils import IdentityScaler, LogScaler, get_model_and_config
 
 
@@ -24,7 +24,7 @@ class DummyModel:
 
 
 def test_dataset_save_includes_scaler_and_scaling_method(tmp_path):
-    ds = object.__new__(RNABaseDataset)
+    ds = object.__new__(BioLMDataset)
     # provide minimal attributes used by save()
     ds.lines = ["A\tSAMPLE\t1"]
     ds.scaler = IdentityScaler()
