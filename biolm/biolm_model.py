@@ -1,10 +1,6 @@
 """Canonical base model API for BioLM plugins.
 
 Plugin authors should inherit from :class:`BioLMModel`.
-
-Backwards-compatibility:
-    - `biolm.base_model.BaseModel` and `biolm.base_dataset.BaseModel` remain as
-      deprecated import paths that re-export this class.
 """
 
 from __future__ import annotations
@@ -33,7 +29,4 @@ class BioLMModel(PreTrainedModel):
         return batch
 
 
-# Optional alias for readability / easier migration in plugin code.
-BaseModel = BioLMModel
-
-__all__ = ["BioLMModel", "BaseModel"]
+__all__ = ["BioLMModel"]

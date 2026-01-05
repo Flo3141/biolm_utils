@@ -10,7 +10,6 @@ import warnings
 
 from .biolm_dataset import BioLMDataset, RNABaseDataset
 
-
 warnings.warn(
     "`biolm.rna_datasets` is deprecated; import `BioLMDataset`/`RNABaseDataset` from `biolm.biolm_dataset` instead.",
     DeprecationWarning,

@@ -10,8 +10,8 @@ from tokenizers.normalizers import Sequence as Normseq
 from tokenizers.pre_tokenizers import Sequence, Split, WhitespaceSplit
 from tokenizers.processors import BertProcessing
 
-from .path_setup import PathsManager
 from .biolm_dataset import RNABaseDataset
+from .path_setup import PathsManager
 
 # UNIREFSIZE = 152_670_237
 

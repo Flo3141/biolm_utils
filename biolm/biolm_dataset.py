@@ -36,7 +36,9 @@ class RNABaseDataset(Dataset):
 
         self.args = args
         self.scaler = scaler  # Store the scaler in the dataset
-        self.scaling_method = getattr(args, "scaling", "identity")  # Store scaling method
+        self.scaling_method = getattr(
+            args, "scaling", "identity"
+        )  # Store scaling method
 
         # Prepare helpers and resolved attributes for structured config
         data_source = getattr(args, "data_source", None)
@@ -127,7 +129,9 @@ class RNABaseDataset(Dataset):
                         getattr(args, "blocksize", None),
                     ),
                     truncation=True,
-                    truncation_side=("left" if tk_get("lefttailing", False) else "right"),
+                    truncation_side=(
+                        "left" if tk_get("lefttailing", False) else "right"
+                    ),
                 )
             spec_normalized_seqs = [
                 spec_tokenizer.backend_tokenizer.normalizer.normalize_str(x)
@@ -278,7 +282,9 @@ class RNABaseDataset(Dataset):
                     np.array(labels).reshape(-1, 1).astype(float)
                 )
             elif getattr(args, "task", None) == "classification":
-                labels = [x.split(columnsep)[labelpos - 1].strip('"') for x in self.lines]
+                labels = [
+                    x.split(columnsep)[labelpos - 1].strip('"') for x in self.lines
+                ]
                 self.labels = self.LE.fit_transform(labels)
 
             # update self.examples with labels (and quality weights).
@@ -295,7 +301,9 @@ class RNABaseDataset(Dataset):
         if target_values is not None and self.scaler is not None:
             self.target_values = self.scaler.fit_transform(target_values)
         else:
-            self.target_values = target_values  # Use raw values if no scaler is provided
+            self.target_values = (
+                target_values  # Use raw values if no scaler is provided
+            )
 
     def __len__(self):
         return len(self.examples)
@@ -346,7 +354,9 @@ class RNABaseDataset(Dataset):
             scaler=data.get("scaler"),  # Load the scaler
         )
         dataset.lines = data["lines"]
-        dataset.scaling_method = data.get("scaling_method", "identity")  # Load scaling method
+        dataset.scaling_method = data.get(
+            "scaling_method", "identity"
+        )  # Load scaling method
         return dataset
 
 
