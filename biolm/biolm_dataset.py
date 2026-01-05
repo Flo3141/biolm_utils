@@ -17,7 +17,7 @@ import logging
 import pickle
 import re
 import tempfile
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence
 
 import numpy as np
 import pandas as pd
@@ -41,6 +41,11 @@ class BioLMDataset(Dataset):
         self.tokenizer = tokenizer
         self.args = args
 
+        # Resolve max length early and use it consistently.
+        # This avoids accidentally padding to an absurd HuggingFace default (e.g. 1e30)
+        # when `tokenizer.model_max_length` is not configured.
+        self.max_len = self._resolve_max_len(default_if_absurd=12288)
+
         self.nspecs = 0
         self.specs = None
         self.OHE = None
@@ -51,7 +56,9 @@ class BioLMDataset(Dataset):
 
         # Load raw lines
         filepath = self._resolve_filepath(args)
-        self.lines = self._read_lines(filepath, stripheader=self._ds_get("stripheader", False))
+        self.lines = self._read_lines(
+            filepath, stripheader=self._ds_get("stripheader", False)
+        )
 
         # Basic parsing config
         self.columnsep = self._ds_get("columnsep", "\t")
@@ -75,8 +82,8 @@ class BioLMDataset(Dataset):
         self._maybe_build_specs()
         self.seqs = self._pretokenize_sequences(self.normalized_lines)
 
-        # Tokenized strings for logging/stats
-        self.tokenized_seqs = self._tokenize_raw_strings(self.seqs)
+        # Tokenized strings for logging/stats are computed lazily.
+        self._tokenized_seqs: Optional[List[List[str]]] = None
 
         # Encode + pad/truncate
         encodings = self.tokenizer(
@@ -84,12 +91,13 @@ class BioLMDataset(Dataset):
             add_special_tokens=add_special_tokens,
             truncation=True,
             padding="max_length",
+            max_length=self.max_len,
         )["input_ids"]
         logging.info("Encoding sequences finished.")
-        max_len = self._resolve_max_len(default_if_absurd=12288)
-        self.examples = np.array(
-            [{"input_ids": ids} for ids in self._pad_truncate(encodings, max_len)]
-        )
+        # `max_length` should already guarantee correct shapes; keep a small safety net.
+        if any(len(e) != self.max_len for e in encodings):
+            encodings = self._pad_truncate(encodings, self.max_len)
+        self.examples = np.array([{"input_ids": ids} for ids in encodings])
 
         # Scaler handling
         self.scaler = scaler
@@ -144,15 +152,16 @@ class BioLMDataset(Dataset):
         ]
         logging.info("Pre-tokenizing sequences finished.")
         return [
-            self.join_str.join([y[0] for y in x]).replace("Ġ", "") for x in pre_tokenized
+            self.join_str.join([y[0] for y in x]).replace("Ġ", "")
+            for x in pre_tokenized
         ]
 
     def _tokenize_raw_strings(self, seqs: Sequence[str]) -> List[List[str]]:
         log_lvl = transformers.utils.logging.get_verbosity()
         transformers.logging.set_verbosity_error()
-        raw_encodings = self.tokenizer(seqs, add_special_tokens=False, truncation=False)[
-            "input_ids"
-        ]
+        raw_encodings = self.tokenizer(
+            seqs, add_special_tokens=False, truncation=False
+        )["input_ids"]
         transformers.logging.set_verbosity(log_lvl)
 
         tokenized = [self.tokenizer.convert_ids_to_tokens(x) for x in raw_encodings]
@@ -160,6 +169,18 @@ class BioLMDataset(Dataset):
         tokenized = [[t for t in toks if t] for toks in tokenized]
         logging.info("Raw tokenizing sequences finished.")
         return tokenized
+
+    @property
+    def tokenized_seqs(self) -> List[List[str]]:
+        """Tokenized sequences for logging/statistics.
+
+        This is intentionally computed lazily because it can be expensive and is
+        not needed for most training/prediction runs.
+        """
+
+        if self._tokenized_seqs is None:
+            self._tokenized_seqs = self._tokenize_raw_strings(self.seqs)
+        return self._tokenized_seqs
 
     # -----------------
     # Specifier support
@@ -171,7 +192,8 @@ class BioLMDataset(Dataset):
 
         spec_tokenizer = self._build_spec_tokenizer()
         spec_normalized = [
-            spec_tokenizer.backend_tokenizer.normalizer.normalize_str(x) for x in self.lines
+            spec_tokenizer.backend_tokenizer.normalizer.normalize_str(x)
+            for x in self.lines
         ]
         spec_pre = [
             spec_tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(x)[0][0]
@@ -196,7 +218,7 @@ class BioLMDataset(Dataset):
                         (0, self.nspecs - len(y)),
                         constant_values=0.0,
                     )
-                    for y in x[: self.tokenizer.model_max_length]
+                    for y in x[: self.max_len]
                 ]
             )
             for x in specs
@@ -205,7 +227,7 @@ class BioLMDataset(Dataset):
         self.specs = [
             np.pad(
                 x,
-                ((0, self.tokenizer.model_max_length - x.shape[0]), (0, 0)),
+                ((0, self.max_len - x.shape[0]), (0, 0)),
                 constant_values=0,
             )
             for x in specs_arr
@@ -230,9 +252,11 @@ class BioLMDataset(Dataset):
                 sep_token="[SEP]",
                 bos_token="[BOS]",
                 eos_token="[EOS]",
-                model_max_length=self._resolve_max_len(default_if_absurd=None),
+                model_max_length=self.max_len,
                 truncation=True,
-                truncation_side=("left" if self._tk_get("lefttailing", False) else "right"),
+                truncation_side=(
+                    "left" if self._tk_get("lefttailing", False) else "right"
+                ),
             )
 
     # -----------------
@@ -261,7 +285,9 @@ class BioLMDataset(Dataset):
         except Exception as e:
             raise ValueError("tokenizer.model_max_length must be an integer") from e
 
-    def _pad_truncate(self, encodings: Sequence[Sequence[int]], max_len: int) -> List[List[int]]:
+    def _pad_truncate(
+        self, encodings: Sequence[Sequence[int]], max_len: int
+    ) -> List[List[int]]:
         pad_id = int(self.tokenizer.pad_token_id)
         padded: List[List[int]] = []
         for e in encodings:
@@ -311,7 +337,9 @@ class BioLMDataset(Dataset):
             ]
 
             if weightpos is not None:
-                qualities = [line.split(",")[weightpos].strip('"') for line in self.lines]
+                qualities = [
+                    line.split(",")[weightpos].strip('"') for line in self.lines
+                ]
                 qual_dict = {"STRONG": 1.0, "GOOD": 0.75, "WEAK": 0.5, "POOR": 0.25}
                 self.qualities = [qual_dict[x] for x in qualities]
 
@@ -326,7 +354,8 @@ class BioLMDataset(Dataset):
             if self.LE is None:
                 self.LE = LabelEncoder()
             labels = [
-                line.split(self.columnsep)[labelpos - 1].strip('"') for line in self.lines
+                line.split(self.columnsep)[labelpos - 1].strip('"')
+                for line in self.lines
             ]
             self.labels = self.LE.fit_transform(labels)
         else:
