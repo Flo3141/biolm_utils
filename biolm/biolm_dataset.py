@@ -17,7 +17,9 @@ import logging
 import pickle
 import re
 import tempfile
-from typing import Any, List, Optional, Sequence
+import os
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Callable, List, Optional, Sequence, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -26,6 +28,9 @@ from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
 from torch.utils.data import Dataset
 
 from .train_utils import IdentityScaler, LogScaler
+
+
+T = TypeVar("T")
 
 
 class BioLMDataset(Dataset):
@@ -74,9 +79,11 @@ class BioLMDataset(Dataset):
         self.join_str = "" if tokensep is None or self.encoding == "bpe" else tokensep
 
         # Normalize, pre-tokenize
-        self.normalized_lines = [
-            tokenizer.backend_tokenizer.normalizer.normalize_str(x) for x in self.lines
-        ]
+        self.normalized_lines = self._maybe_parallel_map(
+            tokenizer.backend_tokenizer.normalizer.normalize_str,
+            self.lines,
+            stage="normalize",
+        )
         logging.info("Normalizing sequences finished.")
 
         self._maybe_build_specs()
@@ -146,10 +153,11 @@ class BioLMDataset(Dataset):
         return lines
 
     def _pretokenize_sequences(self, normalized_lines: Sequence[str]) -> List[str]:
-        pre_tokenized = [
-            self.tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(x)
-            for x in normalized_lines
-        ]
+        pre_tokenized = self._maybe_parallel_map(
+            self.tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str,
+            normalized_lines,
+            stage="pretokenize",
+        )
         logging.info("Pre-tokenizing sequences finished.")
         return [
             self.join_str.join([y[0] for y in x]).replace("Ġ", "")
@@ -191,15 +199,73 @@ class BioLMDataset(Dataset):
             return
 
         spec_tokenizer = self._build_spec_tokenizer()
-        spec_normalized = [
-            spec_tokenizer.backend_tokenizer.normalizer.normalize_str(x)
-            for x in self.lines
-        ]
-        spec_pre = [
-            spec_tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(x)[0][0]
-            for x in spec_normalized
-        ]
+        spec_normalized = self._maybe_parallel_map(
+            spec_tokenizer.backend_tokenizer.normalizer.normalize_str,
+            self.lines,
+            stage="spec_normalize",
+        )
+        spec_pre_tok = self._maybe_parallel_map(
+            spec_tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str,
+            spec_normalized,
+            stage="spec_pretokenize",
+        )
+        spec_pre = [x[0][0] for x in spec_pre_tok]
         logging.info("Spec normalizing/tokenizing sequences finished.")
+    def _dataset_num_workers(self) -> int:
+        """Determine the number of worker threads for dataset preprocessing.
+
+        This is intentionally conservative and bounded. Order is preserved.
+
+        Overrides:
+            - `BIOLM_DATASET_NUM_WORKERS` env var (int)
+            - `args.settings.data_pre_processing.num_workers` (int)
+            - `args.settings.data_pre_processing["num_workers"]` (int)
+        """
+
+        env = os.getenv("BIOLM_DATASET_NUM_WORKERS")
+        if env is not None:
+            try:
+                return max(0, int(env))
+            except Exception:
+                return 0
+
+        settings = getattr(self.args, "settings", None)
+        dp = getattr(settings, "data_pre_processing", None) if settings is not None else None
+        if dp is not None:
+            if hasattr(dp, "num_workers"):
+                try:
+                    return max(0, int(getattr(dp, "num_workers")))
+                except Exception:
+                    return 0
+            if isinstance(dp, dict) and "num_workers" in dp:
+                try:
+                    return max(0, int(dp.get("num_workers")))
+                except Exception:
+                    return 0
+
+        # Auto-enable only for larger datasets to avoid overhead.
+        n = len(getattr(self, "lines", []) or [])
+        if n < 2000:
+            return 0
+        return max(1, min(8, (os.cpu_count() or 1)))
+
+    def _maybe_parallel_map(
+        self,
+        fn: Callable[[T], Any],
+        items: Sequence[T],
+        stage: str,
+    ) -> List[Any]:
+        """Apply `fn` over `items`, optionally in a thread pool.
+
+        Uses `executor.map` to preserve input order.
+        """
+
+        workers = self._dataset_num_workers()
+        if workers <= 1:
+            return [fn(x) for x in items]
+        logging.info("Dataset preprocessing (%s) using %s workers", stage, workers)
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            return list(ex.map(fn, items))
 
         specs = [
             [
