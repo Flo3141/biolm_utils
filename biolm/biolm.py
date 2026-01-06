@@ -227,7 +227,7 @@ def train(
     config,
 ):
     """Handles the model training loop."""
-    ensure_runtime(config)
+    ensure_runtime()
     trainer_cls = _get_trainer_class(args.mode, args.task)
     num_labels = _get_num_labels(args.mode, args.task, full_dataset)
 
