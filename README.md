@@ -57,14 +57,14 @@ git checkout biolm-2.0
 
 - **Developer install — keep framework metadata clean**
 
--  ```bash
--  # inside the biolm_utils repo
--  poetry install --no-interaction --with dev
--  # install your local plugin(s) into the env without touching pyproject
--  poetry run biolm develop-plugin /path/to/your/plugin
--  ```
+  ```bash
+  # inside the biolm_utils repo
+  poetry install --no-interaction --with dev
+  # install your local plugin(s) into the env without touching pyproject
+  poetry run biolm develop-plugin /path/to/your/plugin
+  ```
 
--  This keeps `pyproject.toml` unchanged while wiring editable installs through the CLI. Edits in your plugin repos are picked up immediately. To remove, run `poetry run pip uninstall <plugin-name>`.
+  This keeps `pyproject.toml` unchanged while wiring editable installs through the CLI. Edits in your plugin repos are picked up immediately. To remove, run `poetry run pip uninstall <plugin-name>`.
 
 If you previously used `install-plugin` and no longer want the cloned copies, you can safely remove the `./plugins` directory; the CLI will recreate it on demand for future user installs.
 
