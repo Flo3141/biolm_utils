@@ -14,10 +14,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import pickle
 import re
 import tempfile
-import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, List, Optional, Sequence, TypeVar
 
@@ -28,7 +28,6 @@ from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
 from torch.utils.data import Dataset
 
 from .train_utils import IdentityScaler, LogScaler
-
 
 T = TypeVar("T")
 
@@ -56,35 +55,12 @@ class BioLMDataset(Dataset):
         self.OHE = None
 
         self.LE: Optional[LabelEncoder] = None
-        if getattr(args, "task", None) == "classification":
-            self.LE = LabelEncoder()
 
-        # Load raw lines
-        filepath = self._resolve_filepath(args)
-        self.lines = self._read_lines(
-            filepath, stripheader=self._ds_get("stripheader", False)
-        )
-
-        # Basic parsing config
-        self.columnsep = self._ds_get("columnsep", "\t")
-        self.idpos = self._ds_get("idpos", None)
-        if self.idpos is None:
-            raise ValueError("data_source.idpos must be set (1-indexed)")
-        self.seq_idx = [
-            line.split(self.columnsep)[self.idpos - 1].strip('"') for line in self.lines
-        ]
-
-        tokensep = self._ds_get("tokensep", None)
-        self.encoding = self._tk_get("encoding", "atomic")
-        self.join_str = "" if tokensep is None or self.encoding == "bpe" else tokensep
+        self._setup_dataset_metadata()
+        self._setup_tokenization_context()
 
         # Normalize, pre-tokenize
-        self.normalized_lines = self._maybe_parallel_map(
-            tokenizer.backend_tokenizer.normalizer.normalize_str,
-            self.lines,
-            stage="normalize",
-        )
-        logging.info("Normalizing sequences finished.")
+        self.normalized_lines = self._normalize_lines()
 
         self._maybe_build_specs()
         self.seqs = self._pretokenize_sequences(self.normalized_lines)
@@ -93,24 +69,9 @@ class BioLMDataset(Dataset):
         self._tokenized_seqs: Optional[List[List[str]]] = None
 
         # Encode + pad/truncate
-        encodings = self.tokenizer(
-            self.seqs,
-            add_special_tokens=add_special_tokens,
-            truncation=True,
-            padding="max_length",
-            max_length=self.max_len,
-        )["input_ids"]
-        logging.info("Encoding sequences finished.")
-        # `max_length` should already guarantee correct shapes; keep a small safety net.
-        if any(len(e) != self.max_len for e in encodings):
-            encodings = self._pad_truncate(encodings, self.max_len)
-        self.examples = np.array([{"input_ids": ids} for ids in encodings])
-
-        # Scaler handling
-        self.scaler = scaler
+        self.examples = self._encode_sequences(self.seqs, add_special_tokens)
         self.scaling_method = self._resolve_scaling_method()
-        if self.scaler is None:
-            self.scaler = self._make_scaler(self.scaling_method)
+        self.scaler = self._initialize_scaler(scaler)
 
         self._maybe_attach_labels()
         self._maybe_attach_target_values()
@@ -138,6 +99,24 @@ class BioLMDataset(Dataset):
             raise ValueError("data_source.filepath (or filepath) must be set")
         return str(filepath)
 
+    def _setup_dataset_metadata(self) -> None:
+        filepath = self._resolve_filepath(self.args)
+        stripheader = self._ds_get("stripheader", False)
+        self.lines = self._read_lines(filepath, stripheader=stripheader)
+
+        self.columnsep = self._ds_get("columnsep", "\t")
+        self.idpos = self._ds_get("idpos", None)
+        if self.idpos is None:
+            raise ValueError("data_source.idpos must be set (1-indexed)")
+        self.seq_idx = [
+            line.split(self.columnsep)[self.idpos - 1].strip('"') for line in self.lines
+        ]
+
+    def _setup_tokenization_context(self) -> None:
+        tokensep = self._ds_get("tokensep", None)
+        self.encoding = self._tk_get("encoding", "atomic")
+        self.join_str = "" if tokensep is None or self.encoding == "bpe" else tokensep
+
     # -----------------
     # IO / preprocessing
     # -----------------
@@ -151,6 +130,35 @@ class BioLMDataset(Dataset):
         if stripheader and lines:
             lines = lines[1:]
         return lines
+
+    def _normalize_lines(self) -> List[str]:
+        normalized = self._maybe_parallel_map(
+            self.tokenizer.backend_tokenizer.normalizer.normalize_str,
+            self.lines,
+            stage="normalize",
+        )
+        logging.info("Normalizing sequences finished.")
+        return normalized
+
+    def _encode_sequences(
+        self, seqs: Sequence[str], add_special_tokens: bool
+    ) -> np.ndarray:
+        encodings = self.tokenizer(
+            seqs,
+            add_special_tokens=add_special_tokens,
+            truncation=True,
+            padding="max_length",
+            max_length=self.max_len,
+        )["input_ids"]
+        logging.info("Encoding sequences finished.")
+        if any(len(e) != self.max_len for e in encodings):
+            encodings = self._pad_truncate(encodings, self.max_len)
+        return np.array([{"input_ids": ids} for ids in encodings])
+
+    def _initialize_scaler(self, scaler: Optional[Any]) -> Any:
+        if scaler is not None:
+            return scaler
+        return self._make_scaler(self.scaling_method)
 
     def _pretokenize_sequences(self, normalized_lines: Sequence[str]) -> List[str]:
         pre_tokenized = self._maybe_parallel_map(
@@ -211,6 +219,7 @@ class BioLMDataset(Dataset):
         )
         spec_pre = [x[0][0] for x in spec_pre_tok]
         logging.info("Spec normalizing/tokenizing sequences finished.")
+
     def _dataset_num_workers(self) -> int:
         """Determine the number of worker threads for dataset preprocessing.
 
@@ -230,7 +239,11 @@ class BioLMDataset(Dataset):
                 return 0
 
         settings = getattr(self.args, "settings", None)
-        dp = getattr(settings, "data_pre_processing", None) if settings is not None else None
+        dp = (
+            getattr(settings, "data_pre_processing", None)
+            if settings is not None
+            else None
+        )
         if dp is not None:
             if hasattr(dp, "num_workers"):
                 try:
@@ -266,38 +279,6 @@ class BioLMDataset(Dataset):
         logging.info("Dataset preprocessing (%s) using %s workers", stage, workers)
         with ThreadPoolExecutor(max_workers=workers) as ex:
             return list(ex.map(fn, items))
-
-        specs = [
-            [
-                re.findall(rf"(?<={specifiersep})[^{specifiersep}]+", y)
-                for y in x.split(" ")
-            ]
-            for x in spec_pre
-        ]
-
-        self.nspecs = len(max(max([x for x in y]) for y in specs))
-        specs_arr = [
-            np.array(
-                [
-                    np.pad(
-                        list(map(float, y)),
-                        (0, self.nspecs - len(y)),
-                        constant_values=0.0,
-                    )
-                    for y in x[: self.max_len]
-                ]
-            )
-            for x in specs
-        ]
-
-        self.specs = [
-            np.pad(
-                x,
-                ((0, self.max_len - x.shape[0]), (0, 0)),
-                constant_values=0,
-            )
-            for x in specs_arr
-        ]
 
     def _build_spec_tokenizer(self) -> Any:
         # This mirrors the legacy behaviour (strip spec-related components).

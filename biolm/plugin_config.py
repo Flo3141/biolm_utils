@@ -20,6 +20,8 @@ import importlib.metadata
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple, Type
 
+from omegaconf import DictConfig, OmegaConf
+
 # Optional imports - plugins can override these
 try:
     from transformers import PreTrainedTokenizerFast
@@ -258,13 +260,8 @@ def _extract_plugin_defaults(
     return plugin_defaults, plugin_config
 
 
-def load_plugin_defaults(plugin_name: str) -> Dict[str, Any]:
-    """Load plugin defaults via entry point and seed PluginManager.
-
-    Returns a dict of Hydra-compatible overrides (may be empty) that should be
-    merged at lower precedence than user-provided config. Also sets the
-    PluginManager config if the plugin returns a PluginConfig-like object.
-    """
+def _load_plugin_entry(plugin_name: str) -> Tuple[Dict[str, Any], PluginConfig]:
+    """Load and normalize a plugin entry point, returning defaults + config."""
 
     ep = _find_entry_point(plugin_name)
     if ep is None:
@@ -272,16 +269,42 @@ def load_plugin_defaults(plugin_name: str) -> Dict[str, Any]:
             f"Plugin '{plugin_name}' not found. Ensure it registers under the 'biolm.plugins' entry-point group."
         )
 
-    plugin_factory = ep.load()
-    plugin_obj = plugin_factory()
-
+    factory = ep.load()
+    plugin_obj = factory()
     plugin_defaults, plugin_config = _extract_plugin_defaults(plugin_obj)
 
-    if plugin_config is not None:
-        try:
-            PluginManager.set_config(plugin_config)
-        except Exception:
-            # Don't fail if a legacy object is returned; keep best-effort behavior
-            PluginManager.set_config(PluginConfig())
+    if plugin_config is None:
+        plugin_config = PluginConfig()
 
+    try:
+        PluginManager.set_config(plugin_config)
+    except Exception:
+        # Keep best-effort behavior for legacy objects
+        PluginManager.set_config(PluginConfig())
+
+    return plugin_defaults, plugin_config
+
+
+def load_plugin_defaults(plugin_name: str) -> Dict[str, Any]:
+    """Return the defaults exposed by a plugin (for compatibility)."""
+
+    plugin_defaults, _ = _load_plugin_entry(plugin_name)
     return plugin_defaults
+
+
+def merge_plugin_defaults(cfg: Optional[DictConfig]) -> Optional[DictConfig]:
+    """Inject plugin defaults below the explicit Hydra config."""
+
+    if cfg is None:
+        return cfg
+
+    plugin_name = cfg.get("plugin")
+    if not plugin_name:
+        return cfg
+
+    plugin_defaults, _ = _load_plugin_entry(plugin_name)
+    if not plugin_defaults:
+        return cfg
+
+    defaults_cfg = OmegaConf.create(plugin_defaults)
+    return OmegaConf.merge(defaults_cfg, cfg)

@@ -63,6 +63,8 @@ git checkout biolm-2.0
 
   This keeps `pyproject.toml` unchanged. Edits in your plugin repos are picked up immediately by the editable install. To remove, run `poetry run pip uninstall <plugin-name>`.
 
+**Notes on plugin discovery:** Plugins are discovered via the `biolm.plugins` entry-point group declared in each plugin’s `pyproject.toml` (e.g., `xlnet = "xlnet_plugin.config:get_xlnet_config"`, `saluki = "saluki_plugin.config:get_saluki_config"`). As long as the plugin is installed into the same Poetry environment as BioLM (either via `install-plugin` or `pip install -e <path-or-git-url>`), the CLI can load it — no extra registration code is required.
+
 If you previously used `install-plugin` and no longer want the cloned copies, you can safely remove the `./plugins` directory; the CLI will recreate it on demand for future user installs.
 
 ---

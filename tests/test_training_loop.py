@@ -102,5 +102,7 @@ def test_minimal_training_loop(tmp_path):
     assert hasattr(trainer, "state")
     # Check that model forward still works after training
     sample = train_ds[0]
-    out = model(**{"input_ids": sample["input_ids"].unsqueeze(0)})
+    device = next(model.parameters()).device
+    input_batch = sample["input_ids"].unsqueeze(0).to(device)
+    out = model(**{"input_ids": input_batch})
     assert "logits" in out

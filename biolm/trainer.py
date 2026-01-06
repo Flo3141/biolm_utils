@@ -14,6 +14,10 @@ class RegressionTrainer(Trainer):
         outputs = model(**inputs)
         logits = outputs.get("logits")
         targets = targets.type(logits.dtype)
+        try:
+            targets = targets.to(self.args.device)
+        except Exception:
+            pass
         loss = torch.nn.functional.mse_loss(logits.squeeze(), targets.squeeze())
         return (loss, outputs) if return_outputs else loss
 
