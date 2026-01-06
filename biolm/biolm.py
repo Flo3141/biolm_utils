@@ -392,7 +392,7 @@ def test(
     model,
 ):
     """Handles the model testing and prediction."""
-    ensure_runtime(config)
+    ensure_runtime()
     trainer_cls = _get_trainer_class(args.mode, args.task)
 
     if model is None:
