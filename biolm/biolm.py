@@ -26,7 +26,6 @@ args = None
 constants = None
 paths = None
 from .interpret import loo_scores
-from .mlflow_integration import with_mlflow_defaults
 from .params import get_detected_ngpus
 from .paths import Paths
 from .runner import make_run_fn
@@ -258,39 +257,6 @@ def train(
     )
     labels = getattr(full_dataset, "labels", None)
 
-    # Set up MLflow if enabled
-    callbacks = []
-    mlflow_conf = None
-    if (
-        hasattr(args, "settings")
-        and args.settings
-        and hasattr(args.settings, "mlflow")
-        and args.settings.mlflow
-        and args.settings.mlflow.get("enabled", False)
-    ):
-        mlflow_conf = with_mlflow_defaults(args, args.settings.mlflow)
-        if mlflow_conf.get("experiment_name") or mlflow_conf.get("experiment_id"):
-            try:
-                import mlflow
-                from transformers.integrations import MLflowCallback
-
-                tracking_uri = mlflow_conf.get("tracking_uri")
-                if tracking_uri:
-                    mlflow.set_tracking_uri(tracking_uri)
-                if mlflow_conf.get("experiment_id"):
-                    mlflow.set_experiment(experiment_id=mlflow_conf["experiment_id"])
-                elif mlflow_conf.get("experiment_name"):
-                    mlflow.set_experiment(
-                        experiment_name=mlflow_conf["experiment_name"]
-                    )
-                callbacks = [MLflowCallback()]
-            except ImportError:
-                logging.warning("MLflow integration not available.")
-        else:
-            logging.warning(
-                "MLflow enabled but no experiment id/name; skipping integration."
-            )
-
     trainer = trainer_cls(
         model=model,
         args=training_args,
@@ -299,7 +265,6 @@ def train(
         processing_class=tokenizer_for_trainer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
-        callbacks=callbacks,
     )
 
     num_epochs_trained = 0
