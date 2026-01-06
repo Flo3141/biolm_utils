@@ -10,6 +10,8 @@ A modular PyTorch framework for training language models on biological sequences
 
 - [Installation](#installation)
 - [Adding Plugins](#adding-plugins)
+
+  **Notes on plugin discovery:** Plugins register themselves in each plugin’s `pyproject.toml` under the `biolm.plugins` entry-point group (e.g., `xlnet = "xlnet_plugin.config:get_xlnet_config"`, `saluki = "saluki_plugin.config:get_saluki_config"`). As long as the package is installed in the same Poetry environment as BioLM (via `install-plugin` or `pip install -e <path-or-git-url>`), the framework will auto-discover it—no additional registration is needed.
 - [Data Format](#data-format)
 - [Modes Overview](#modes-overview)
 - [Usage](#usage)
@@ -52,6 +54,8 @@ git checkout biolm-2.0
 
   `install-plugin` will clone the plugin repo into `./plugins/<name>` inside this project and install it in editable mode. Use this flow if you just need to run the plugin without editing its source elsewhere.
 
+  **Notes on plugin discovery:** Plugins register themselves via the `biolm.plugins` entry-point group in their `pyproject.toml` (e.g., `xlnet = "xlnet_plugin.config:get_xlnet_config"`, `saluki = "saluki_plugin.config:get_saluki_config"`). As long as the package is installed in the same Poetry environment as BioLM (`install-plugin` or `pip install -e <path-or-git-url>`), the framework automatically discovers the entry point—no additional registration is needed.
+
 - **Developer install — keep framework metadata clean**
 
   ```bash
@@ -62,8 +66,6 @@ git checkout biolm-2.0
   ```
 
   This keeps `pyproject.toml` unchanged. Edits in your plugin repos are picked up immediately by the editable install. To remove, run `poetry run pip uninstall <plugin-name>`.
-
-**Notes on plugin discovery:** Plugins are discovered via the `biolm.plugins` entry-point group declared in each plugin’s `pyproject.toml` (e.g., `xlnet = "xlnet_plugin.config:get_xlnet_config"`, `saluki = "saluki_plugin.config:get_saluki_config"`). As long as the plugin is installed into the same Poetry environment as BioLM (either via `install-plugin` or `pip install -e <path-or-git-url>`), the CLI can load it — no extra registration code is required.
 
 If you previously used `install-plugin` and no longer want the cloned copies, you can safely remove the `./plugins` directory; the CLI will recreate it on demand for future user installs.
 
