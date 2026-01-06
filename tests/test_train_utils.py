@@ -1,7 +1,9 @@
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import numpy as np
+import pandas as pd
 import pytest
 import torch
 
@@ -10,6 +12,7 @@ from biolm.train_utils import (
     LogScaler,
     compute_metrics_for_classification,
     compute_metrics_for_regression,
+    create_reports,
 )
 
 
@@ -69,3 +72,26 @@ class TestTrainUtils:
         assert "recall" in result
         assert "f1" in result
         assert isinstance(result["accuracy"], float)
+
+
+def test_create_reports_accepts_list_labels(tmp_path):
+    class DummyDataset:
+        seq_idx = ["seq1", "seq2"]
+        labels = np.array([1.1, 2.2])
+
+    test_dataset = SimpleNamespace(dataset=DummyDataset(), indices=[0, 1])
+    test_results = SimpleNamespace(predictions=np.array([[0.1], [0.2]]))
+    scaler = IdentityScaler()
+
+    report_file = tmp_path / "report.csv"
+    rank_file = tmp_path / "rank.csv"
+
+    create_reports(test_dataset, test_results, scaler, report_file, rank_file)
+
+    assert report_file.exists()
+    assert rank_file.exists()
+
+    report_df = pd.read_csv(report_file)
+    assert list(report_df["sequence"]) == ["seq1", "seq2"]
+    assert list(report_df["label"]) == [1.1, 2.2]
+    assert list(report_df["prediction"]) == [0.1, 0.2]

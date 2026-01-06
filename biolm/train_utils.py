@@ -162,8 +162,8 @@ def create_reports(test_dataset, test_results, scaler, report_path, rank_path):
 
     # Save the sequence idx, predictions and true labels to a csv file.
     if hasattr(test_dataset.dataset, "labels"):
-        labels = [test_dataset.dataset.labels[i] for i in test_dataset.indices]
-        labels = scaler.inverse_transform(labels).squeeze()
+        labels = np.array([test_dataset.dataset.labels[i] for i in test_dataset.indices])
+        labels = scaler.inverse_transform(labels.reshape(1, -1)).squeeze()
         # Create a file with rank deltas.
         label_tups = list(enumerate(labels))
         label_seq_tups = [x + tuple([y]) for x, y in zip(label_tups, seqs)]
