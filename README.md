@@ -44,7 +44,7 @@ git checkout biolm-2.0
 
 **Adding Plugins:**
 
-- **Standard (user) install — clones into `./plugins/`**
+-- **Standard (user) install — clones into `./plugins/`**
 
   ```bash
   poetry run biolm install-plugin <path-or-git-url>
@@ -53,7 +53,7 @@ git checkout biolm-2.0
 
   `install-plugin` will clone the plugin repo into `./plugins/<name>` inside this project and install it in editable mode. Use this flow if you just need to run the plugin without editing its source elsewhere.
 
-  **Notes on plugin discovery:** Plugins register themselves via the `biolm.plugins` entry-point group in their `pyproject.toml` (e.g., `xlnet = "xlnet_plugin.config:get_xlnet_config"`, `saluki = "saluki_plugin.config:get_saluki_config"`). As long as the package is installed in the same Poetry environment as BioLM (`install-plugin`, `develop-plugin`, or `pip install -e <path-or-git-url>`), the framework automatically discovers the entry point—no additional registration is needed.
+  **Notes on plugin discovery:** Plugins expose factories through the `biolm.plugins` entry-point group in their `pyproject.toml`. As long as the package is installed into the same Poetry environment as BioLM (via `install-plugin`, `develop-plugin`, or `pip install -e <path-or-git-url>`), the framework automatically discovers the entry point—no additional registration is required.
 
 - **Developer install — keep framework metadata clean**
 
