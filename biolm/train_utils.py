@@ -261,10 +261,8 @@ def get_model_and_config(
             f"{datetime.fromtimestamp(model_load_path.stat().st_ctime)} with {n_epochs} epochs trained."
         )
         model.scaling_method = getattr(model.config, "scaling_method", None)
-    if args.mode != "pre-train":
-        if scaler is not None:
-            model.scaler = scaler
-        else:
-            # For predict/interpret, scaler should be loaded from dataset
-            pass
+    if scaler is not None:
+        model.scaler = scaler
+    elif not hasattr(model, "scaler"):
+        model.scaler = IdentityScaler()
     return model

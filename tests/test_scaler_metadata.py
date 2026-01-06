@@ -62,5 +62,24 @@ def test_get_model_and_config_attaches_scaler():
     assert model.scaler is scaler
 
 
+def test_get_model_and_config_defaults_scaler():
+    args = DummyArgs(mode="fine-tune")
+
+    model = get_model_and_config(
+        args=args,
+        model_cls=DummyModel,
+        model_config_cls=SimpleNamespace,
+        tokenizer=None,
+        dataset=None,
+        nlabels=1,
+        model_load_path=Path("."),
+        pretraining_required=False,
+        scaler=None,
+    )
+
+    assert hasattr(model, "scaler")
+    assert isinstance(model.scaler, IdentityScaler)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
