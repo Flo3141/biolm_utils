@@ -4105,41 +4105,6 @@ socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
-name = "rna-protein-xlnet"
-version = "0.1.0"
-description = "XLNet plugin for RNA-protein interaction prediction"
-optional = false
-python-versions = "^3.10"
-groups = ["main"]
-files = []
-develop = true
-
-[package.dependencies]
-torch = "^2.0.0"
-transformers = "^4.21.0"
-
-[package.source]
-type = "directory"
-url = "../rna_protein_xlnet"
-
-[[package]]
-name = "rna-saluki-cnn"
-version = "0.1.0"
-description = "Saluki plugin for biolm_utils"
-optional = false
-python-versions = "^3.10"
-groups = ["main"]
-files = []
-develop = true
-
-[package.dependencies]
-mlflow = "^3.6.0"
-
-[package.source]
-type = "directory"
-url = "../rna_saluki_cnn"
-
-[[package]]
 name = "rsa"
 version = "4.9.1"
 description = "Pure-Python RSA implementation"
@@ -5726,4 +5691,4 @@ mlflow = ["mlflow"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "67473c72b4619ebcb3525521335c00cb2217e8eef4583369f87cc28b1efa33c0"
+content-hash = "50d2886a7f859040b0764ce5e55e593ad78f34afca183603503e9fc38a5227f9"

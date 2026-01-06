@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import pickle
@@ -24,6 +25,38 @@ from .tokenization_loader import get_tokenizer
 from .trainer_builder import get_trainer
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_source_filepath(args) -> Path:
+    data_source = getattr(args, "data_source", None)
+    filepath = (
+        getattr(data_source, "filepath", None) if data_source is not None else None
+    )
+    if not filepath:
+        filepath = getattr(args, "filepath", None)
+    if not filepath:
+        raise ValueError("data_source.filepath (or filepath) must be set")
+    return Path(filepath)
+
+
+def _compute_source_hash(args) -> str:
+    source_path = _resolve_source_filepath(args)
+    hasher = hashlib.sha256()
+    with open(source_path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def _load_metadata(metadata_file: Path) -> dict[str, str]:
+    if not metadata_file.exists():
+        return {}
+    try:
+        with open(metadata_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        logger.warning("Unable to read dataset metadata %s", metadata_file)
+        return {}
 
 
 def _apply_model_overrides(model_config, model_overrides):
@@ -62,22 +95,40 @@ def _apply_model_overrides(model_config, model_overrides):
 
 def get_dataset(args, tokenizer, add_special_tokens, dataset_file, dataset_cls):
     current_blocksize = getattr(getattr(args, "training", None), "blocksize", None)
+    source_hash = _compute_source_hash(args)
+    metadata_file = dataset_file.with_suffix(".metadata.json")
     if dataset_file.exists():
         logger.info(f"Loading dataset from {dataset_file}")
-        with open(dataset_file, "rb") as f:
-            dataset = pickle.load(f)
-        logger.info(f"First sample length: {len(dataset[0]['input_ids'])}")
-        if (
-            current_blocksize is not None
-            and len(dataset[0]["input_ids"]) != current_blocksize
-        ):
-            logger.warning(
-                f"Dataset blocksize mismatch ({len(dataset[0]['input_ids'])} vs {current_blocksize}), recreating dataset"
+        metadata = _load_metadata(metadata_file)
+        cached_hash = metadata.get("source_hash")
+        if cached_hash is None:
+            logger.info("No dataset metadata hash found; forcing recreation.")
+            dataset_file.unlink(missing_ok=True)
+            metadata_file.unlink(missing_ok=True)
+        elif cached_hash != source_hash:
+            logger.info(
+                "Data source changed (%s vs %s); recreating dataset",
+                cached_hash,
+                source_hash,
             )
             dataset_file.unlink(missing_ok=True)
+            metadata_file.unlink(missing_ok=True)
         else:
-            tokenizer = dataset.tokenizer
-            return dataset
+            with open(dataset_file, "rb") as f:
+                dataset = pickle.load(f)
+            logger.info(f"First sample length: {len(dataset[0]['input_ids'])}")
+            if (
+                current_blocksize is not None
+                and len(dataset[0]["input_ids"]) != current_blocksize
+            ):
+                logger.warning(
+                    f"Dataset blocksize mismatch ({len(dataset[0]['input_ids'])} vs {current_blocksize}), recreating dataset"
+                )
+                dataset_file.unlink(missing_ok=True)
+                metadata_file.unlink(missing_ok=True)
+            else:
+                tokenizer = dataset.tokenizer
+                return dataset
 
     # Create new dataset
     dataset = dataset_cls(
@@ -89,12 +140,11 @@ def get_dataset(args, tokenizer, add_special_tokens, dataset_file, dataset_cls):
         logger.info(f"Saving dataset to {dataset_file}")
         with open(dataset_file, "wb") as f:
             pickle.dump(dataset, f)
-        # Save metadata
-        metadata_file = dataset_file.with_suffix(".metadata.json")
         metadata = {
             "scaling_method": dataset.scaling_method,
+            "source_hash": source_hash,
         }
-        with open(metadata_file, "w") as f:
+        with open(metadata_file, "w", encoding="utf-8") as f:
             json.dump(metadata, f)
     if getattr(getattr(args, "debugging", None), "getdata", False):
         sys.exit()

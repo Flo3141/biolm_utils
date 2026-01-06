@@ -73,6 +73,7 @@ class MyDataset(torch.utils.data.Dataset):
 
 ## 4. Verification
 
-1. **Install**: `pip install -e .`
+1. **Install**: `poetry run biolm develop-plugin /path/to/your/plugin` (runs `pip install -e` on the checkout)
+    - alternatively, `pip install -e .` works as well when already inside the repo
 2. **List**: `biolm list-plugins` (should show `my_cool_model`)
 3. **Run**: `biolm fine-tune plugin=my_cool_model ...`

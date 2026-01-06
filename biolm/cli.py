@@ -58,6 +58,7 @@ def parse_args():
     MANAGEMENT_COMMANDS = {
         "plugin": lambda args: handle_plugin_command(args),
         "install-plugin": lambda args: handle_plugin_command(["install"] + args),
+        "develop-plugin": lambda args: handle_plugin_command(["develop"] + args),
         "list-plugins": lambda args: handle_plugin_command(["list"] + args),
         "remove-plugin": lambda args: handle_plugin_command(["remove"] + args),
     }
@@ -68,6 +69,7 @@ def parse_args():
         print("===================")
         print("\nManagement Commands:")
         print("  install-plugin <url>   Install a plugin from a Git URL")
+        print("  develop-plugin <path>  Install a local plugin in editable mode")
         print("  list-plugins           List installed plugins")
         print("  remove-plugin <name>   Uninstall a plugin")
         print("  plugin <command>       Access advanced plugin management")

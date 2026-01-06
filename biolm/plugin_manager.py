@@ -44,6 +44,25 @@ def install_plugin(url: str, target_dir: str = "plugins"):
         sys.exit(1)
 
 
+def develop_plugin(path: str):
+    """Install an existing plugin repository in editable mode."""
+
+    plugin_path = Path(path).expanduser().resolve()
+    if not plugin_path.exists():
+        print(f"Plugin path {plugin_path} does not exist.")
+        sys.exit(1)
+
+    print(f"Installing {plugin_path.name} from local path in editable mode...")
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "-e", str(plugin_path)]
+        )
+        print("Successfully installed plugin without modifying pyproject.toml.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error installing plugin: {e}")
+        sys.exit(1)
+
+
 def list_plugins():
     """List installed plugins registered via entry points."""
     print("Installed biolm plugins:")
@@ -134,6 +153,12 @@ def handle_plugin_command(args):
         "--dir", default="plugins", help="Directory to clone into (default: plugins)"
     )
 
+    develop_parser = subparsers.add_parser(
+        "develop",
+        help="Install a local plugin repository in editable mode without cloning",
+    )
+    develop_parser.add_argument("path", help="Path to the plugin repository")
+
     # List command
     subparsers.add_parser("list", help="List installed plugins")
 
@@ -147,6 +172,8 @@ def handle_plugin_command(args):
         install_plugin(parsed_args.url, parsed_args.dir)
     elif parsed_args.command == "list":
         list_plugins()
+    elif parsed_args.command == "develop":
+        develop_plugin(parsed_args.path)
     elif parsed_args.command == "remove":
         remove_plugin(parsed_args.name)
     else:
