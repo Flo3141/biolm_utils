@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+from biolm.mlflow_integration import start_mlflow_run, with_mlflow_defaults
 from biolm.structured_config import BioLMConfig, SettingsConfig
 
 
@@ -38,9 +39,6 @@ def test_start_mlflow_run_enabled(tmp_path, monkeypatch):
     recorder = {}
     fake_mlflow = make_fake_mlflow(recorder)
     monkeypatch.setitem(sys.modules, "mlflow", fake_mlflow)
-
-    # import here to use the lazy importer in the module under test
-    from biolm.mlflow_integration import start_mlflow_run
 
     args = BioLMConfig(
         mode="fine-tune",
@@ -96,3 +94,16 @@ def test_start_mlflow_run_disabled(monkeypatch):
 
     # ensure no mlflow calls were recorded
     assert recorder == {}
+
+
+def test_with_mlflow_defaults_populates_missing_values(tmp_path):
+    args = BioLMConfig(
+        mode="pre-train",
+        task="regression",
+        outputpath=str(tmp_path / "artifact_dir"),
+        settings=SettingsConfig(mlflow={"enabled": True}),
+    )
+    defaults = with_mlflow_defaults(args, args.settings.mlflow)
+
+    assert defaults["experiment_name"] == "pre-train_artifact_dir"
+    assert defaults["tracking_uri"].endswith("/artifact_dir/pre-train/mlruns")

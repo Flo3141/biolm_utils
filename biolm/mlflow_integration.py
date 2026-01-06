@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-def _with_mlflow_defaults(args: Any, mlflow_conf: Dict[str, Any]) -> Dict[str, Any]:
+def with_mlflow_defaults(args: Any, mlflow_conf: Dict[str, Any]) -> Dict[str, Any]:
     """Fill in tracking_uri/experiment_name defaults using args when missing.
 
     Keeps mutations local (returns a shallow copy) so callers don't alter the
@@ -40,6 +40,9 @@ def _with_mlflow_defaults(args: Any, mlflow_conf: Dict[str, Any]) -> Dict[str, A
             conf["experiment_name"] = f"biolm-{mode}"
 
     return conf
+
+
+_with_mlflow_defaults = with_mlflow_defaults
 
 
 class MLflowNotInstalled(Exception):
@@ -100,7 +103,11 @@ def start_mlflow_run(
         yield None
         return
 
-    mlflow_conf = _with_mlflow_defaults(args, mlflow_conf)
+    if not mlflow_conf:
+        yield None
+        return
+
+    mlflow_conf = with_mlflow_defaults(args, mlflow_conf)
 
     mlflow = _import_mlflow()
 
