@@ -173,54 +173,40 @@ Always pass an explicit `--config-path`/`--config-name`; runtime initialization 
 4. Mode dispatcher (`runner`) calls the appropriate trainer/evaluator.
 5. Artifacts and logs are written to `${outputpath}/{mode}`; MLflow (if enabled) logs params/metrics/artifacts to `${outputpath}/mlruns`.
 
-## ⚡ Quickstart Examples
+## ⚡ Quickstart Guide
 
-- **Saluki**
+This quickstart demonstrates how to launch each mode using the example sequences bundled with this repo. Keep your plugin choice flexible—replace `<plugin_name>` with whichever plugin you have installed via `biolm install-plugin` / `develop-plugin` or another editable install.
 
-  ```bash
-  # minimal config (saluki_quick.yaml)
-  plugin: rna_saluki_cnn
-  outputpath: /tmp/biolm_saluki_quick
-  task: classification
-  data_source:
-    filepath: /prj/RNA_NLP/biolm_utils/examples/data/quickstart_sequences.tsv
-    columnsep: "\t"
-    idpos: 1
-    seqpos: 3
-    labelpos: 2
-    splitratio: [70, 15, 15]
-  training:
-    nepochs: 3
-    batchsize: 4
-  ```
+1. Create a minimal config (e.g., `quickstart.yaml`) inside a new experiment directory:
 
-  Run: `poetry run biolm fine-tune --config-path . --config-name saluki_quick`
+```yaml
+plugin: <plugin_name>
+outputpath: /tmp/biolm_quickstart
+task: classification
+data_source:
+  filepath: examples/data/quickstart_sequences.tsv
+  columnsep: "\t"
+  idpos: 1
+  seqpos: 2
+  labelpos: 3
+  splitratio: [70, 15, 15]
+training:
+  nepochs: 3
+  batchsize: 4
+```
 
-- **XLNet**
+2. Run each mode against this config (adjust if your plugin requires pre-training):
 
-  ```bash
-  # minimal config (xlnet_quick.yaml)
-  plugin: rna_protein_xlnet
-  outputpath: /tmp/biolm_xlnet_quick
-  task: classification
-  data_source:
-    filepath: /prj/RNA_NLP/biolm_utils/examples/data/quickstart_sequences.tsv
-    columnsep: "\t"
-    idpos: 1
-    seqpos: 2
-    labelpos: 3
-    splitratio: [70, 15, 15]
-  training:
-    nepochs: 1
-    batchsize: 2
-    blocksize: 256
-  ```
+```bash
+poetry run biolm tokenize --config-path . --config-name quickstart
+poetry run biolm pre-train --config-path . --config-name quickstart
+poetry run biolm fine-tune --config-path . --config-name quickstart
+poetry run biolm predict --config-path . --config-name quickstart inference.pretrainedmodel=/tmp/biolm_quickstart/fine-tune/model.safetensors
+```
 
-  Run sequence:
-  1) `poetry run biolm tokenize --config-path . --config-name xlnet_quick`
-  2) `poetry run biolm pre-train --config-path . --config-name xlnet_quick`
-  3) `poetry run biolm fine-tune --config-path . --config-name xlnet_quick`
-  4) `poetry run biolm predict --config-path . --config-name xlnet_quick`
+3. If your plugin does not need pre-training (e.g., many CNN models), skip the `pre-train` command and go straight to `fine-tune`. Update `task`, `training.*`, and `inference.*` overrides per your data.
+
+Use the example sequences data so that quickstarts work without cloning plugin repos—the file contains 100 tab-separated rows with columns (ID, label, sequence) that split cleanly for classification and regression tasks.
 
 ---
 
