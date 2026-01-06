@@ -347,7 +347,7 @@ def train(
         # Sort by checkpoint number
         checkpoint_dirs.sort(key=lambda d: int(d.name.split("-")[-1]))
         best_ckpt = checkpoint_dirs[-1]
-        final_model_dir = model_save_path.parent / "final_model"
+        final_model_dir = model_save_path / "final_model"
         if final_model_dir.exists():
             shutil.rmtree(final_model_dir)
         shutil.copytree(best_ckpt, final_model_dir)
