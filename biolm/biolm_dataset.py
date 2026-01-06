@@ -24,10 +24,10 @@ from typing import Any, Callable, List, Optional, Sequence, TypeVar
 import numpy as np
 import pandas as pd
 import transformers
-from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
+from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import Dataset
 
-from .train_utils import IdentityScaler, LogScaler
+from .scaling import ScalingSpec, build_scaling_spec
 
 T = TypeVar("T")
 
@@ -40,6 +40,7 @@ class BioLMDataset(Dataset):
         tokenizer: Any,
         args: Any,
         add_special_tokens: bool,
+        scaling_spec: Optional[ScalingSpec] = None,
         scaler: Optional[Any] = None,
     ):
         self.tokenizer = tokenizer
@@ -70,11 +71,40 @@ class BioLMDataset(Dataset):
 
         # Encode + pad/truncate
         self.examples = self._encode_sequences(self.seqs, add_special_tokens)
-        self.scaling_method = self._resolve_scaling_method()
-        self.scaler = self._initialize_scaler(scaler)
+        self._scaling_spec = self._initialize_scaling_spec(scaling_spec, scaler)
 
         self._maybe_attach_labels()
         self._maybe_attach_target_values()
+
+    @property
+    def scaling_spec(self) -> ScalingSpec:
+        return self._scaling_spec
+
+    @scaling_spec.setter
+    def scaling_spec(self, value: ScalingSpec) -> None:
+        self._scaling_spec = value
+
+    @property
+    def scaler(self) -> Any:
+        return self.scaling_spec.scaler
+
+    @scaler.setter
+    def scaler(self, value: Any) -> None:
+        current_method = getattr(self, "_scaling_spec", None)
+        method = current_method.method if current_method else "identity"
+        self._scaling_spec = ScalingSpec(method=method, scaler=value)
+
+    @property
+    def scaling_method(self) -> str:
+        return self.scaling_spec.method
+
+    @scaling_method.setter
+    def scaling_method(self, value: str) -> None:
+        current_scaler = getattr(self, "_scaling_spec", None)
+        scaler = current_scaler.scaler if current_scaler else None
+        self._scaling_spec = build_scaling_spec(
+            getattr(self, "args", None), method=value, scaler=scaler
+        )
 
     # -----------------
     # Config access
@@ -353,22 +383,16 @@ class BioLMDataset(Dataset):
     # -----------------
     # Labels/scaling
     # -----------------
-    def _resolve_scaling_method(self) -> str:
-        scaling = getattr(
-            getattr(self.args, "training", None),
-            "scaling",
-            getattr(self.args, "scaling", None),
-        )
-        return scaling or "identity"
-
-    def _make_scaler(self, scaling_method: str) -> Any:
-        if scaling_method == "minmax":
-            return MinMaxScaler()
-        if scaling_method == "standard":
-            return StandardScaler()
-        if scaling_method == "log":
-            return LogScaler()
-        return IdentityScaler()
+    def _initialize_scaling_spec(
+        self,
+        scaling_spec: Optional[ScalingSpec],
+        scaler: Optional[Any],
+    ) -> ScalingSpec:
+        if scaling_spec is not None:
+            return scaling_spec
+        if scaler is not None:
+            return build_scaling_spec(self.args, scaler=scaler)
+        return build_scaling_spec(self.args)
 
     def _maybe_attach_labels(self) -> None:
         mode = getattr(self.args, "mode", None)
@@ -471,16 +495,19 @@ class BioLMDataset(Dataset):
         """Load the dataset along with the scaler."""
         with open(filepath, "rb") as f:
             data = pickle.load(f)
+        scaling_spec = build_scaling_spec(
+            args,
+            method=data.get("scaling_method"),
+            scaler=data.get("scaler"),
+        )
         dataset = cls(
             tokenizer=tokenizer,
             args=args,
             add_special_tokens=add_special_tokens,
-            scaler=data.get("scaler"),  # Load the scaler
+            scaling_spec=scaling_spec,
         )
         dataset.lines = data["lines"]
-        dataset.scaling_method = data.get(
-            "scaling_method", "identity"
-        )  # Load scaling method
+        # Keep the loaded scaling spec method in place; no additional action needed.
         return dataset
 
 
