@@ -18,12 +18,18 @@ class LogScaler:
     def fit_transform(self, data):
         return np.log(data)
 
+    def transform(self, data):
+        return np.log(data)
+
     def inverse_transform(self, data):
         return np.exp(data)
 
 
 class IdentityScaler:
     def fit_transform(self, data):
+        return data
+
+    def transform(self, data):
         return data
 
     def inverse_transform(self, data):
