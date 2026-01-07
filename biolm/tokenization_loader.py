@@ -14,7 +14,9 @@ def get_tokenizer(args, tokenizer_file: Path, tokenizer_cls, pretraining_require
     mode = getattr(args, "mode", None)
 
     if mode == "fine-tune" and pretraining_required:
-        tokenizer_config_file = tokenizer_file.parent / "pre-train" / "tokenizer_config.json"
+        tokenizer_config_file = (
+            tokenizer_file.parent / "pre-train" / "tokenizer_config.json"
+        )
         tokenizer_file = tokenizer_file.parent / "pre-train" / "tokenizer.json"
         with open(tokenizer_config_file, "r") as ff:
             tok_config = json.load(ff)
@@ -33,10 +35,12 @@ def get_tokenizer(args, tokenizer_file: Path, tokenizer_cls, pretraining_require
         with open(tokenizer_file, "r") as f:
             tokenizer_json = json.load(f)
         col = getattr(getattr(args, "data_source", None), "columnsep", "\t")
-        seqpos = getattr(getattr(args, "data_source", None), "seqpos", 1)
+        seqpos_value = getattr(getattr(args, "data_source", None), "seqpos", None)
+        if seqpos_value is None:
+            seqpos_value = 1
         tokenizer_json["pre_tokenizer"]["pretokenizers"][1]["pattern"][
             "Regex"
-        ] = f"([^{col}]*{col}){{{int(seqpos) - 1}}}"
+        ] = f"([^{col}]*{col}){{{int(seqpos_value) - 1}}}"
         tokenizer_json["pre_tokenizer"]["pretokenizers"][2]["pattern"][
             "Regex"
         ] = f"{col}.*"
@@ -44,11 +48,13 @@ def get_tokenizer(args, tokenizer_file: Path, tokenizer_cls, pretraining_require
         if tokensep is not None:
             num_elements = len(tokenizer_json["normalizer"]["normalizers"])
             if num_elements > 1:
-                tokenizer_json["normalizer"]["normalizers"][
-                    -2
-                ]["pattern"]["String"] = tokensep
+                tokenizer_json["normalizer"]["normalizers"][-2]["pattern"][
+                    "String"
+                ] = tokensep
             else:
-                encoding = getattr(getattr(args, "tokenization", None), "encoding", "atomic")
+                encoding = getattr(
+                    getattr(args, "tokenization", None), "encoding", "atomic"
+                )
                 replacement = "" if encoding == "bpe" else " "
                 pattern = (
                     {

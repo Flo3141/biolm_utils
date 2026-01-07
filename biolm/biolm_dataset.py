@@ -137,7 +137,7 @@ class BioLMDataset(Dataset):
         self.columnsep = self._ds_get("columnsep", "\t")
         self.idpos = self._ds_get("idpos", None)
         if self.idpos is None:
-            raise ValueError("data_source.idpos must be set (1-indexed)")
+            self.idpos = 1
         self.seq_idx = [
             line.split(self.columnsep)[self.idpos - 1].strip('"') for line in self.lines
         ]

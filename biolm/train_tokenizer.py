@@ -134,7 +134,10 @@ def tokenize(args):
     # removing metadata left
     colsep = getattr(args.data_source, "columnsep", "\t")
     # how many tokens to skip (seqpos defaults to 1; we need count - 1)
-    seqpos_count = int(getattr(args.data_source, "seqpos", 1)) - 1
+    seqpos_value = getattr(getattr(args, "data_source", None), "seqpos", None)
+    if seqpos_value is None:
+        seqpos_value = 1
+    seqpos_count = int(seqpos_value) - 1
     pattern_left = f"([^{colsep}]*{colsep})" + "{" + str(seqpos_count) + "}"
     pre_seq.append(Split(pattern=Regex(pattern_left), behavior="removed"))
     # removing metadata right
