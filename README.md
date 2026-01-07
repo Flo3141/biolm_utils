@@ -201,12 +201,23 @@ training:
 
 ### Hydra composition
 
-The shared base config declares `defaults:
+The shared base config declares:
+
+```yaml
+defaults:
   - mode: ???
-  - _self_`, which means Hydra expects you to resolve a mode file (e.g., the `mode/fine-tune.yaml`
-bundle) before the CLI can run. You can do this either by adding `defaults:
+  - _self_
+```
+
+This means Hydra expects you to resolve a mode file (e.g., the `mode/fine-tune.yaml` bundle) before the CLI can run. You can do this either by adding:
+
+```yaml
+defaults:
   - mode: fine-tune
-  - _self_` inside your experiment config or by passing `mode=fine-tune` on the command line.
+  - _self_
+```
+
+inside your experiment config or by passing `mode=fine-tune` on the command line.
 
 Hydra merges the base config, the selected mode, your experiment config, and any runtime overrides
 (for example, `training.nepochs=50` or `data_source.filepath=/new/path`). That keeps the common
