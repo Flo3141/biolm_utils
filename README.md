@@ -1,5 +1,3 @@
-> **Note:** The `biolm-2.0` branch contains the latest, actively developed version of BioLM with major improvements and a new plugin architecture. The `main` branch is legacy. For the newest features and code, please [switch to the `biolm-2.0` branch](https://github.com/dieterich-lab/biolm_utils/tree/biolm-2.0).
-
 # BioLM 2.0 Framework
 
 A modular PyTorch framework for training language models on biological sequences (RNA/protein). Features a **plugin architecture** where model implementations are separate packages developed and versioned independently.
@@ -10,7 +8,6 @@ A modular PyTorch framework for training language models on biological sequences
 
 - [Installation](#installation)
 - [Adding Plugins](#adding-plugins)
-  - Notes on plugin discovery: plugins expose their factories through the `biolm.plugins` entry-point group, so installing via `install-plugin`, `develop-plugin`, or an editable pip install lets BioLM pick them up automatically.
 - [Data Format](#data-format)
 - [Modes Overview](#modes-overview)
 - [Usage](#usage)
@@ -40,31 +37,33 @@ git checkout biolm-2.0
 ./install.sh
 ```
 
+BioLM 2.0 development happens on the `biolm-2.0` branch—`main` is the legacy line, so always install from `biolm-2.0` for the latest features and fixed plugin hooks.
+
 `install.sh` installs only the BioLM framework. Plugins are installed separately (see below).
 
-**Adding Plugins:**
+## 🔌 Adding Plugins
 
--- **Standard (user) install — clones into `./plugins/`**
+- **Standard (user) install — clones into `./plugins/`**
 
   ```bash
+  # inside the biolm_utils repo
   poetry run biolm install-plugin <path-or-git-url>
   poetry run biolm list-plugins
   ```
 
-  `install-plugin` will clone the plugin repo into `./plugins/<name>` inside this project and install it in editable mode. Use this flow if you just need to run the plugin without editing its source elsewhere.
+  `install-plugin` clones the plugin repository to `./plugins/<name>`, installs it in editable mode, and wires the entry point listed under `biolm.plugins`. Use this path when you want to run plugins without maintaining another working tree.
 
-  **Notes on plugin discovery:** Plugins expose factories through the `biolm.plugins` entry-point group in their `pyproject.toml`. As long as the package is installed into the same Poetry environment as BioLM (via `install-plugin`, `develop-plugin`, or `pip install -e <path-or-git-url>`), the framework automatically discovers the entry point—no additional registration is required.
+  **Plugin discovery:** As long as the plugin is installed in the same Poetry environment (via `install-plugin`, `develop-plugin`, `poetry run pip install -e <path>`, etc.), BioLM automatically discovers the entry point—no extra registration steps are needed.
 
 - **Developer install — keep framework metadata clean**
 
   ```bash
   # inside the biolm_utils repo
   poetry install --no-interaction --with dev
-  # install your local plugin(s) into the env without touching pyproject
   poetry run biolm develop-plugin /path/to/your/plugin
   ```
 
-  This keeps `pyproject.toml` unchanged while wiring editable installs through the CLI. Edits in your plugin repos are picked up immediately. To remove, run `poetry run pip uninstall <plugin-name>`.
+  This keeps `pyproject.toml` unchanged while wiring editable installs through the CLI. Edits in your plugin repos are picked up immediately. Remove via `poetry run pip uninstall <plugin-name>` when you are done.
 
 If you previously used `install-plugin` and no longer want the cloned copies, you can safely remove the `./plugins` directory; the CLI will recreate it on demand for future user installs.
 
@@ -304,32 +303,48 @@ poetry run biolm fine-tune --config-name custom_training --config-path ./my_expe
 
 ## 📂 Output Directory Structure
 
-The framework organizes outputs in the following structure:
+The framework organizes outputs under the configured `outputpath`:
 
 ```plaintext
 output/
 ├── tokenize/
-│   ├── vocab.json           # Tokenizer vocabulary
-│   └── merges.txt           # Merge rules (if BPE)
+│   ├── merges.txt              # BPE merge rules (if applicable)
+│   ├── vocab.json             # Tokenizer vocabulary
+│   ├── tokenizer_config.json  # HuggingFace tokenizer configuration
+│   └── tokenizer.json         # Serialized tokenizer weights
 ├── pre-train/
-│   ├── checkpoint-XX/       # Checkpoint folders
-│   ├── model.safetensors    # Final model weights
-│   ├── config.json          # Model configuration
-│   └── logs/                # Training logs
+│   ├── checkpoint-XX/         # Checkpoints saved per epoch
+│   ├── model.safetensors      # Final model weights
+│   ├── config.json            # Model config
+│   ├── pre-train_dataset.pkl  # Cached dataset (for reproducibility)
+│   ├── logs/<timestamp>.log   # Training logs
+│   └── final_model/           # Copy of best checkpoint
 ├── fine-tune/
-│   ├── checkpoint-XX/       # Checkpoint folders
-│   ├── model.safetensors    # Fine-tuned model weights
-│   ├── all_results.json     # Aggregated metrics
-│   ├── test_predictions.csv # Predictions on test set
-│   └── logs/                # Training logs
+│   ├── checkpoint-XX/         # Checkpoints
+│   ├── model.safetensors      # Fine-tuned weights
+│   ├── fine-tune_dataset.pkl  # Dataset cache
+│   ├── all_results.json       # Aggregated metrics (trainer)
+│   ├── test_predictions.csv   # Raw predictions on the test split
+│   ├── rank_deltas.csv        # Rank delta report (regression)
+│   ├── logs/<timestamp>.log   # Training logs
+│   └── final_model/           # Best checkpoint copy
 ├── predict/
-│   ├── test_predictions.csv # Model predictions
-│   └── logs/                # Execution logs
+│   ├── predict_dataset.pkl    # Cached inference dataset
+│   ├── test_predictions.csv   # Model predictions (IDs + outputs)
+│   ├── rank_deltas.csv        # Ranking comparison (regression)
+│   ├── logs/<timestamp>.log   # Inference logs
+│   └── report.csv             # Legacy report file (legacy modes)
 ├── interpret/
-│   ├── loo_scores.csv       # Feature importance scores
-│   └── logs/                # Execution logs
-└── mlruns/                  # MLflow tracking data
+│   ├── interpret_dataset.pkl  # Cached dataset for LOO scoring
+│   ├── loo_scores_mask.csv     # Leave-one-out scores (mask policy)
+│   ├── loo_scores_mask.pkl     # Serialized SHAP explanations
+│   ├── loo_scores_remove.csv   # Leave-one-out scores (remove policy)
+│   ├── loo_scores_remove.pkl   # Serialized explanations
+│   └── logs/<timestamp>.log   # Interpret logs
+└── mlruns/                     # MLflow tracking data
 ```
+
+Each mode writes `logs/<timestamp>.log` plus the dataset cache (`<mode>_dataset.pkl`) and any ranking/report files so reproducing a run only needs the appropriate slice of the tree.
 
 ### Artifact contents (what to expect)
 
