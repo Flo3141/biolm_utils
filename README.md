@@ -172,11 +172,16 @@ Always pass an explicit `--config-path`/`--config-name`; runtime initialization 
 4. Mode dispatcher (`runner`) calls the appropriate trainer/evaluator.
 5. Artifacts and logs are written to `${outputpath}/{mode}`; MLflow (if enabled) logs params/metrics/artifacts to `${outputpath}/mlruns`.
 
-## ⚡ Quickstart Guide
+## ⚙️ Configuration & Quickstart
 
-This quickstart demonstrates how to launch each mode using the example sequences bundled with this repo. Keep your plugin choice flexible—replace `<plugin_name>` with whichever plugin you have installed via `biolm install-plugin` / `develop-plugin` or another editable install.
+BioLM uses Hydra to compose the framework-wide base config ([biolm/conf/config.yaml](biolm/conf/config.yaml#L3-L90)) with
+mode-specific overrides ([biolm/conf/mode](biolm/conf/mode)) and any user-provided experiment files.
+Organize experiments in dedicated directories so `--config-path`/`--config-name` can find them easily.
 
-1. Create a minimal config (e.g., `quickstart.yaml`) inside a new experiment directory:
+### Minimal experiment config
+
+Pick a plugin, output path, and the options that change per run. Here is a minimal `config.yaml` you
+can drop into any experiment directory:
 
 ```yaml
 plugin: <plugin_name>
@@ -194,18 +199,61 @@ training:
   batchsize: 4
 ```
 
-2. Run each mode against this config (adjust if your plugin requires pre-training):
+### Hydra composition
 
-```bash
-poetry run biolm tokenize --config-path . --config-name quickstart
-poetry run biolm pre-train --config-path . --config-name quickstart
-poetry run biolm fine-tune --config-path . --config-name quickstart
-poetry run biolm predict --config-path . --config-name quickstart inference.pretrainedmodel=/tmp/biolm_quickstart/fine-tune/model.safetensors
+The shared base config declares `defaults:
+  - mode: ???
+  - _self_`, which means Hydra expects you to resolve a mode file (e.g., the `mode/fine-tune.yaml`
+bundle) before the CLI can run. You can do this either by adding `defaults:
+  - mode: fine-tune
+  - _self_` inside your experiment config or by passing `mode=fine-tune` on the command line.
+
+Hydra merges the base config, the selected mode, your experiment config, and any runtime overrides
+(for example, `training.nepochs=50` or `data_source.filepath=/new/path`). That keeps the common
+defaults inside `biolm/conf` untouched while letting you customize only the pieces that change per run.
+
+### Custom experiment directories
+
+Structure each experiment like this:
+
+```
+my_experiment/
+├── config.yaml
+└── mode/
+    └── fine-tune.yaml
 ```
 
-3. If your plugin does not need pre-training (e.g., many CNN models), skip the `pre-train` command and go straight to `fine-tune`. Update `task`, `training.*`, and `inference.*` overrides per your data.
+Drop the minimal config above into `config.yaml` and add `mode/fine-tune.yaml` when you need to
+override defaults from [biolm/conf/mode/fine-tune.yaml](biolm/conf/mode/fine-tune.yaml#L1-L10)
+(different splits, MLflow hooks, debug flags, etc.). Run the CLI with:
 
-Use the example sequences data so that quickstarts work without cloning plugin repos—the file contains 100 tab-separated rows with columns (ID, label, sequence) that split cleanly for classification and regression tasks.
+```bash
+poetry run biolm fine-tune --config-path ./my_experiment --config-name config
+```
+
+If the file does not pin the mode yet, append `mode=fine-tune` to resolve the ??? default.
+
+### Quickstart commands
+
+With a config directory ready, run the modes sequentially as follows (adjust for your plugin if it
+does not require pre-training):
+
+```bash
+poetry run biolm tokenize --config-path ./my_experiment --config-name config
+poetry run biolm pre-train --config-path ./my_experiment --config-name config
+poetry run biolm fine-tune --config-path ./my_experiment --config-name config
+poetry run biolm predict --config-path ./my_experiment --config-name config inference.pretrainedmodel=/tmp/biolm_quickstart/fine-tune/model.safetensors
+```
+
+Skip the `pre-train` command if your plugin (for example, a CNN) only needs fine-tuning. The
+[examples/data/quickstart_sequences.tsv](examples/data/quickstart_sequences.tsv) file includes 100
+tab-separated rows (ID, label, sequence) so you can experiment without cloning any plugins.
+
+### Runtime overrides
+
+Pass overrides like `training.batchsize=8`, `data_source.filepath=/new.tsv`, or
+`settings.mlflow.enabled=true` after the command to tweak a single value without editing YAML.
+Hydra merges these last, so they take precedence over the experiment files and the framework defaults.
 
 ---
 
@@ -215,89 +263,6 @@ Use the example sequences data so that quickstarts work without cloning plugin r
 |--------|-------|-----------|--------------|----------|
 | [rna_protein_xlnet](https://github.com/dieterich-lab/rna_protein_xlnet) | XLNet | RNA/DNA/Protein | Yes | General sequence modeling (pre-train + downstream tasks) |
 | [rna_saluki_cnn](https://github.com/dieterich-lab/rna_saluki_cnn) | CNN | RNA/DNA/Protein | No | Sequence classification/regression without pre-train |
-
----
-
-## ⚙️ Configuration Management
-
-BioLM uses Hydra for flexible configuration. Compose configs from multiple files and override values at runtime:
-
-```bash
-poetry run biolm fine-tune --config-path ./my_experiment training.nepochs=50
-```
-
-### Important Configuration Settings (suggested order)
-
-- **`plugin`**, **`task`**, **`outputpath`**: Select the installed plugin, set `classification` or `regression`, and choose where artifacts are written.
-- **`data_source.filepath`**, **`data_source.columnsep`**, **`data_source.splitratio`**: Point to the data file, delimiter (default `\t`), and splits.
-- **`training.nepochs`**, **`training.batchsize`**, **`training.blocksize`**: Core training knobs; `training.batchsize` is also used by interpret.
-- **`inference.pretrainedmodel`**: Checkpoint path required for `predict` and `interpret`.
-- **`inference.looscores.*`**: `handletokens` (`mask`/`remove`), `replacementdict` (limit substitutions), `replacespecifier` (include sequence specifier fields).
-- **`mlflow.enabled`**, **`mlflow.tracking_uri`**: Toggle tracking and set the MLflow artifact store (default `${outputpath}/mlruns`).
-
-**Sample data for quickstarts:** Both quickstarts use the bundled `examples/data/quickstart_sequences.tsv` (tab-separated, columns: id, label, sequence; 100 rows) so they run out-of-the-box and can split cleanly without the plugin repos checked out.
-
-### Example Configuration File
-
-```yaml
-# config.yaml
-plugin: <plugin_name>                       # Replace with the plugin identifier you installed
-outputpath: /path/to/results               # Output directory
-task: regression                            # regression or classification
-
-data_source:
-  filepath: /path/to/data.txt              # Tab-separated data
-  idpos: 1                                  # ID column (1-indexed)
-  seqpos: 3                                 # Sequence column
-  labelpos: 2                               # Label column
-  splitratio: [70, 15, 15]                 # Train/val/test split
-
-training:
-  nepochs: 100                              # Number of epochs
-  batchsize: 8                              # Batch size
-  blocksize: 512                            # Max sequence length
-```
-
-### Hydra Composition
-
-Hydra enables you to compose configurations by merging the base configuration with mode-specific configurations. For example:
-
-**Base Configuration (`config.yaml`):**
-
-```yaml
-plugin: <plugin_name>
-outputpath: /path/to/results
-task: regression
-```
-
-**Mode Configuration (`mode/fine-tune.yaml`):**
-
-```yaml
-training:
-  nepochs: 100
-  batchsize: 8
-  blocksize: 512
-```
-
-When running the `fine-tune` mode, Hydra automatically merges these configurations. You can also specify additional overrides at runtime.
-
-### Creating New Compositions
-
-To create a new composition, you can define additional configuration files. For example, if you want to create a custom training setup:
-
-**Custom Configuration (`custom_training.yaml`):**
-
-```yaml
-training:
-  nepochs: 50
-  batchsize: 16
-```
-
-Run with the custom configuration:
-
-```bash
-poetry run biolm fine-tune --config-name custom_training --config-path ./my_experiment
-```
 
 ---
 
