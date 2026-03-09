@@ -47,8 +47,14 @@ BioLM 2.0 development happens on the `biolm-2.0` branch—`main` is the legacy l
 
   ```bash
   # inside the biolm_utils repo
-  poetry run biolm install-plugin <path-or-git-url>
+  poetry run biolm install-plugin <git-url>
   poetry run biolm list-plugins
+  ```
+
+  For Saluki 2.0 specifically, install from the active branch:
+
+  ```bash
+  poetry run biolm install-plugin "https://github.com/dieterich-lab/rna_saluki_cnn.git?ref=saluki-2.0"
   ```
 
   `install-plugin` clones the plugin repository to `./plugins/<name>`, installs it in editable mode, and wires the entry point listed under `biolm.plugins`. Use this path when you want to run plugins without maintaining another working tree.
@@ -59,11 +65,24 @@ BioLM 2.0 development happens on the `biolm-2.0` branch—`main` is the legacy l
 
   ```bash
   # inside the biolm_utils repo
-  poetry install --no-interaction --with dev
+  poetry install --no-interaction
   poetry run biolm develop-plugin /path/to/your/plugin
   ```
 
-  This keeps `pyproject.toml` unchanged while wiring editable installs through the CLI. Edits in your plugin repos are picked up immediately. Remove via `poetry run pip uninstall <plugin-name>` when you are done.
+  This keeps `pyproject.toml` unchanged while wiring editable installs through the CLI. Edits in your plugin repo are picked up immediately.
+
+  `--with dev` is **optional** and only needed when you also want BioLM framework development dependencies (for example, running framework tests/linters/debug tooling):
+
+  ```bash
+  # optional: only for framework contributors
+  poetry install --no-interaction --with dev
+  ```
+
+  In short:
+  - Framework in "developer mode" = install BioLM with dev extras (`--with dev`).
+  - Plugin in "developer mode" = editable plugin install (`develop-plugin` / `pip install -e`).
+
+  Remove a plugin later via `poetry run pip uninstall <plugin-name>`.
 
 If you previously used `install-plugin` and no longer want the cloned copies, you can safely remove the `./plugins` directory; the CLI will recreate it on demand for future user installs.
 
@@ -167,7 +186,7 @@ Always pass an explicit `--config-path`/`--config-name`; runtime initialization 
 ## 🧭 Execution Flow (at a glance)
 
 1. CLI parses args and Hydra composes configs.
-2. `plugin_registry` resolves the plugin entry point; plugin config classes are loaded.
+2. `plugin_config` resolves the plugin entry point; plugin config classes are loaded.
 3. Data is loaded/prepared (tokenizer built or loaded); datasets are cached under `${outputpath}/{mode}`.
 4. Mode dispatcher (`runner`) calls the appropriate trainer/evaluator.
 5. Artifacts and logs are written to `${outputpath}/{mode}`; MLflow (if enabled) logs params/metrics/artifacts to `${outputpath}/mlruns`.
