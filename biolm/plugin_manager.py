@@ -4,6 +4,33 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse, urlunparse
+
+
+def _parse_plugin_source(source: str) -> tuple[str, str | None]:
+    """Parse a plugin source string into (git_url, ref).
+
+    Supported forms:
+      - https://github.com/org/repo.git
+      - https://github.com/org/repo.git?ref=saluki-2.0
+      - https://github.com/org/repo.git@saluki-2.0
+    """
+    parsed = urlparse(source)
+
+    if parsed.scheme in {"http", "https"}:
+        query = parse_qs(parsed.query)
+        if "ref" in query and query["ref"]:
+            ref = query["ref"][0]
+            clean_url = urlunparse(parsed._replace(query=""))
+            return clean_url, ref
+
+        # Support URL@ref shorthand for HTTPS URLs
+        if "@" in source:
+            base, candidate_ref = source.rsplit("@", 1)
+            if base.endswith(".git") and candidate_ref:
+                return base, candidate_ref
+
+    return source, None
 
 
 def install_plugin(url: str, target_dir: str = "plugins"):
@@ -12,8 +39,10 @@ def install_plugin(url: str, target_dir: str = "plugins"):
     Keeps the host project's pyproject.toml unchanged; installs into the
     current environment via `pip install -e`.
     """
+    git_url, ref = _parse_plugin_source(url)
+
     # Derive directory name from URL
-    repo_name = url.split("/")[-1]
+    repo_name = git_url.split("/")[-1]
     if repo_name.endswith(".git"):
         repo_name = repo_name[:-4]
 
@@ -25,9 +54,14 @@ def install_plugin(url: str, target_dir: str = "plugins"):
     if plugin_path.exists():
         print(f"Directory {plugin_path} already exists. Skipping clone.")
     else:
-        print(f"Cloning {url} into {plugin_path}...")
+        clone_display = f"{git_url} (ref: {ref})" if ref else git_url
+        print(f"Cloning {clone_display} into {plugin_path}...")
         try:
-            subprocess.check_call(["git", "clone", url, str(plugin_path)])
+            clone_cmd = ["git", "clone"]
+            if ref:
+                clone_cmd.extend(["-b", ref, "--single-branch"])
+            clone_cmd.extend([git_url, str(plugin_path)])
+            subprocess.check_call(clone_cmd)
         except subprocess.CalledProcessError as e:
             print(f"Error cloning repository: {e}")
             sys.exit(1)
@@ -148,7 +182,13 @@ def handle_plugin_command(args):
     install_parser = subparsers.add_parser(
         "install", help="Install a plugin from a git URL"
     )
-    install_parser.add_argument("url", help="Git URL of the plugin repository")
+    install_parser.add_argument(
+        "url",
+        help=(
+            "Git URL of the plugin repository. Optional ref supported via "
+            "'?ref=<branch-or-tag>' or '@<branch-or-tag>' for HTTPS URLs."
+        ),
+    )
     install_parser.add_argument(
         "--dir", default="plugins", help="Directory to clone into (default: plugins)"
     )
