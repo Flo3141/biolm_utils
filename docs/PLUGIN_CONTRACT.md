@@ -47,6 +47,18 @@ If step 3 fails with "not a Python project", you are likely on an old branch/lay
 
 A BioLM plugin is a normal Python package that exposes one entry point in the `biolm.plugins` group.
 
+### What is a “Python plugin” in this project?
+
+In BioLM, a plugin is **not** a special file format and **not** a custom registry object.
+It is simply:
+
+- a standard installable Python package (with `pyproject.toml`),
+- that declares one callable under `[tool.poetry.plugins."biolm.plugins"]`,
+- where that callable returns BioLM runtime configuration (`PluginConfig`).
+
+So “plugin registration” means: **package metadata registration via entry points during installation**.
+BioLM later reads that metadata and loads the callable.
+
 At runtime, BioLM:
 
 1. reads installed entry points from the active Python environment,
@@ -56,6 +68,60 @@ At runtime, BioLM:
 5. merges optional plugin defaults into Hydra config.
 
 So the key mechanism is Python package metadata + entry points, not a custom registry file.
+
+---
+
+## 1.1) Exact registration flow (install time vs runtime)
+
+```mermaid
+flowchart TD
+    A[Plugin author creates Python package] --> B[Define entry point in pyproject.toml<br/>group: biolm.plugins]
+    B --> C[Install plugin in BioLM env<br/>pip install -e path_or_git]
+    C --> D[Packaging writes metadata to site-packages<br/>including entry points]
+    D --> E[Registered plugin discoverable via<br/>importlib metadata entry_points group biolm.plugins]
+
+    E --> F[BioLM starts with Hydra config<br/>plugin name]
+    F --> G[plugin_config find entry point by name]
+    G --> H[Load target callable with ep load]
+    H --> I[Execute factory callable]
+
+    I --> J{Factory return type}
+    J -->|PluginConfig| K[Use PluginConfig]
+    J -->|PluginConfig and defaults dict| L[Use PluginConfig plus plugin defaults]
+    J -->|Anything else| M[Raise TypeError]
+
+    K --> N[PluginManager set_config plugin_config]
+    L --> N
+    L --> O[merge_plugin_defaults defaults cfg]
+    N --> P[Framework uses active plugin classes]
+    O --> P
+```
+
+### Install time (registration happens here)
+
+1. Plugin author defines entry point in plugin `pyproject.toml`.
+2. Plugin is installed in the active BioLM environment (`pip install -e ...`).
+3. Installer writes package metadata (including entry points) into environment site-packages.
+
+At this point, plugin is *registered* and discoverable via:
+
+```python
+importlib.metadata.entry_points(group="biolm.plugins")
+```
+
+### Runtime (loading/activation happens here)
+
+1. BioLM reads config value `plugin: <name>`.
+2. `biolm.plugin_config._find_entry_point(<name>)` scans entry points in group `biolm.plugins`.
+3. Matching entry point is loaded with `ep.load()`.
+4. Loaded callable (`factory`) is executed.
+5. Return value must be either:
+    - `PluginConfig`, or
+    - `(PluginConfig, dict)` for optional Hydra defaults.
+6. `PluginManager.set_config(plugin_config)` stores active plugin config.
+7. If defaults dict was returned, `merge_plugin_defaults` merges defaults under user config.
+
+Result: explicit user/Hydra overrides still take precedence.
 
 ---
 
@@ -145,11 +211,12 @@ In `biolm/plugin_config.py`:
 
 Factory may return:
 
-- `PluginConfig`,
-- `dict` defaults,
+- `PluginConfig`, or
 - `(PluginConfig, dict)` tuple.
 
-BioLM normalizes this and sets active config via `PluginManager.set_config(...)`.
+`dict`-only returns are no longer part of the supported contract.
+
+BioLM validates the return shape and sets active config via `PluginManager.set_config(...)`.
 
 ### Step 5: Hydra config merge
 
@@ -166,7 +233,10 @@ A valid plugin package must provide:
 1. Installable Python project at repo root (`pyproject.toml` or `setup.py`).
 2. Entry point in group `biolm.plugins`.
 3. Factory function importable from entry point target.
-4. Factory should return at least a usable `PluginConfig` (or equivalent supported return type).
+4. Factory must return a usable `PluginConfig` (optionally together with a defaults dict).
+    Supported return types:
+    - `PluginConfig`
+    - `(PluginConfig, dict)` where `dict` contains optional plugin defaults for Hydra merge
 
 Minimal factory example:
 
@@ -220,6 +290,14 @@ poetry run biolm list-plugins
 ```bash
 python -c "import importlib.metadata as m; print([e.name for e in m.entry_points(group='biolm.plugins')])"
 ```
+
+1. Verify factory contract manually (quick import test):
+
+```bash
+python -c "from saluki_plugin.config import get_saluki_config; x=get_saluki_config(); print(type(x))"
+```
+
+Expected: `PluginConfig` instance, or a 2-tuple where first element is `PluginConfig`.
 
 1. Run focused tests:
 
