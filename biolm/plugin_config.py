@@ -18,7 +18,7 @@ Example usage:
 
 import importlib.metadata
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Dict, Optional, Tuple, Type
 
 from omegaconf import DictConfig, OmegaConf
 
@@ -207,60 +207,16 @@ class PluginManager:
         cls._instance = config
 
 
-def _get_entry_points_for_group(group: str):
-    """Return entry points for a group across Python versions."""
-    try:
-        eps = importlib.metadata.entry_points(group=group)
-    except TypeError:
-        eps = importlib.metadata.entry_points()
-
-    if hasattr(eps, "select"):
-        return list(eps.select(group=group))
-
-    # Some callers/tests may monkeypatch entry_points to return a bare list.
-    if isinstance(eps, list):
-        return eps
-
-    return list(eps.get(group, []))
-
-
 def _find_entry_point(plugin_name: str):
     """Find the entry point matching the plugin name."""
-    eps = _get_entry_points_for_group("biolm.plugins")
+    eps = importlib.metadata.entry_points(group="biolm.plugins")
     for ep in eps:
         if ep.name == plugin_name:
             return ep
     return None
 
 
-def _extract_plugin_defaults(
-    plugin_obj: Any,
-) -> Tuple[Dict[str, Any], Optional[PluginConfig]]:
-    """Normalize a plugin factory return into defaults and a PluginConfig."""
-    plugin_defaults: Dict[str, Any] = {}
-    plugin_config: Optional[PluginConfig] = None
-
-    if isinstance(plugin_obj, PluginConfig):
-        plugin_config = plugin_obj
-    elif isinstance(plugin_obj, dict):
-        plugin_defaults = plugin_obj
-    elif isinstance(plugin_obj, tuple) and len(plugin_obj) == 2:
-        maybe_config, maybe_defaults = plugin_obj
-        if isinstance(maybe_defaults, dict):
-            plugin_defaults = maybe_defaults
-        if isinstance(maybe_config, PluginConfig):
-            plugin_config = maybe_config
-        elif plugin_config is None and not isinstance(maybe_config, dict):
-            # Allow attr-style objects that resemble PluginConfig
-            plugin_config = maybe_config
-    else:
-        # Treat attr-style objects as PluginConfig-like
-        plugin_config = plugin_obj
-
-    return plugin_defaults, plugin_config
-
-
-def _load_plugin_entry(plugin_name: str) -> Tuple[Dict[str, Any], PluginConfig]:
+def _load_plugin_entry(plugin_name: str) -> Tuple[Dict[str, object], PluginConfig]:
     """Load and normalize a plugin entry point, returning defaults + config."""
 
     ep = _find_entry_point(plugin_name)
@@ -271,25 +227,27 @@ def _load_plugin_entry(plugin_name: str) -> Tuple[Dict[str, Any], PluginConfig]:
 
     factory = ep.load()
     plugin_obj = factory()
-    plugin_defaults, plugin_config = _extract_plugin_defaults(plugin_obj)
 
-    if plugin_config is None:
-        plugin_config = PluginConfig()
+    # Canonical contract: return PluginConfig,
+    # or (PluginConfig, defaults_dict) when plugin-specific Hydra defaults exist.
+    if isinstance(plugin_obj, PluginConfig):
+        plugin_config = plugin_obj
+        plugin_defaults: Dict[str, object] = {}
+    elif (
+        isinstance(plugin_obj, tuple)
+        and len(plugin_obj) == 2
+        and isinstance(plugin_obj[0], PluginConfig)
+        and isinstance(plugin_obj[1], dict)
+    ):
+        plugin_config, plugin_defaults = plugin_obj
+    else:
+        raise TypeError(
+            "Plugin factory must return PluginConfig or (PluginConfig, dict)."
+        )
 
-    try:
-        PluginManager.set_config(plugin_config)
-    except Exception:
-        # Keep best-effort behavior for legacy objects
-        PluginManager.set_config(PluginConfig())
+    PluginManager.set_config(plugin_config)
 
     return plugin_defaults, plugin_config
-
-
-def load_plugin_defaults(plugin_name: str) -> Dict[str, Any]:
-    """Return the defaults exposed by a plugin (for compatibility)."""
-
-    plugin_defaults, _ = _load_plugin_entry(plugin_name)
-    return plugin_defaults
 
 
 def merge_plugin_defaults(cfg: Optional[DictConfig]) -> Optional[DictConfig]:
