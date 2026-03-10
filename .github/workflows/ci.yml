@@ -38,7 +38,7 @@ jobs:
       - name: Run test suite
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          poetry run pytest -q
+          poetry run pytest -q tests --ignore=tests/integration/test_plugin_discovery.py
       - name: Fail if deprecated config keys present
         run: |
           set -e
@@ -70,7 +70,7 @@ jobs:
       - name: Run MLflow smoke tests
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          poetry run pytest -q tests/test_mlflow_integration.py tests/test_runner_mlflow.py tests/test_mlflow_smoke.py tests/test_mlflow_model_logging.py
+          poetry run pytest -q tests/test_mlflow_integration.py tests/test_runner_mlflow.py tests/test_mlflow_smoke.py
 
   plugin-compat:
     name: Plugin compatibility

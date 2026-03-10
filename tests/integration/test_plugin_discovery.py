@@ -20,8 +20,7 @@ def test_plugin_entry_points_exist():
     plugin_names = {ep.name for ep in entry_points}
     print(f"\nFound {len(entry_points)} plugin(s): {plugin_names}")
 
-    # Store for other tests
-    return entry_points
+    # No return value needed; assertions above validate discovery.
 
 
 def test_saluki_plugin_registered():
