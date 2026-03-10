@@ -2,6 +2,7 @@ import pytest
 from omegaconf import OmegaConf
 
 from biolm import loader
+from biolm.plugin_config import PluginConfig
 from biolm.structured_config import BioLMConfig
 
 
@@ -53,10 +54,13 @@ def test_plugin_defaults_are_merged(monkeypatch):
         name = "dummy"
 
         def load(self):
-            return lambda: {
-                "tokenization": {"vocabsize": 123},
-                "training": {"batchsize": 64},
-            }
+            return lambda: (
+                PluginConfig(),
+                {
+                    "tokenization": {"vocabsize": 123},
+                    "training": {"batchsize": 64},
+                },
+            )
 
     def fake_entry_points(group=None):
         if group == "biolm.plugins":

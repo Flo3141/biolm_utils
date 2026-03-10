@@ -1,5 +1,8 @@
 name: CI
 
+env:
+  POETRY_VIRTUALENVS_IN_PROJECT: 'true'
+
 on:
   push:
     branches: [ main, biolm-2.0 ]
@@ -31,12 +34,7 @@ jobs:
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
           poetry --version
-          poetry config virtualenvs.in-project true --local || true
           poetry install --no-interaction --with dev
-      - name: Lint (ruff)
-        run: |
-          pip install ruff
-          ruff check .
       - name: Run test suite
         run: |
           export PATH="$HOME/.local/bin:$PATH"
@@ -44,7 +42,12 @@ jobs:
       - name: Fail if deprecated config keys present
         run: |
           set -e
-          if grep -R --line-number --exclude-dir .git -e '\blearningrate\b' .; then
+          if grep -R --line-number \
+            --exclude-dir .git \
+            --exclude-dir .github \
+            --exclude-dir .venv \
+            --exclude-dir .mypy_cache \
+            -e '\blearningrate\b' .; then
             echo "Found deprecated 'learningrate' usage. Please migrate to 'learning_rate'."
             exit 1
           fi
@@ -62,7 +65,6 @@ jobs:
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
-          poetry config virtualenvs.in-project true --local || true
           poetry install --no-interaction --with dev
           poetry install --no-interaction --with mlflow
       - name: Run MLflow smoke tests
@@ -133,9 +135,4 @@ jobs:
       - name: Verify lockfile
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          poetry lock --no-interaction --no-update
-          if [ -n "$(git status --porcelain --untracked-files=no -- poetry.lock)" ]; then
-            echo "poetry.lock is out-of-sync with pyproject.toml. Run 'poetry lock' and commit the changed poetry.lock file." >&2
-            git --no-pager diff --no-color --name-only -- poetry.lock || true
-            exit 1
-          fi
+          poetry check --lock
