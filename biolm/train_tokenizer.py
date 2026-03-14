@@ -138,7 +138,7 @@ def tokenize(args):
     if seqpos_value is None:
         seqpos_value = 1
     seqpos_count = int(seqpos_value) - 1
-    pattern_left = f"([^{colsep}]*{colsep})" + "{" + str(seqpos_count) + "}"
+    pattern_left = f"^([^{colsep}]*{colsep})" + "{" + str(seqpos_count) + "}"
     pre_seq.append(Split(pattern=Regex(pattern_left), behavior="removed"))
     # removing metadata right
     pattern_right = f"{colsep}.*"
