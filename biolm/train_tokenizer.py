@@ -29,6 +29,8 @@ def tokenize(args):
         ).with_suffix(file_path.suffix)
 
         with open(file_path) as f:
+            if getattr(args.data_source, "stripheader", False):
+                f.readline() # skip header
             newlines = [f.tell()]
             line = f.readline()
             while line:
@@ -118,6 +120,8 @@ def tokenize(args):
                 for line in f.read().splitlines()
                 if (len(line) > 0 and not line.isspace())
             ]
+            if getattr(args.data_source, "stripheader", False) and sample_lines:
+                sample_lines = sample_lines[1:]
             sample_lines = [
                 x.split(getattr(args.data_source, "columnsep", "\t"))[-1]
                 for x in sample_lines
@@ -130,6 +134,13 @@ def tokenize(args):
 
     # splitting lines
     pre_seq.append(Split(pattern="\n", behavior="removed"))
+
+    # removing header if needed (for BPE/atomic encoding, the file is read by the HuggingFace Tokenizer)
+    if getattr(args.data_source, "stripheader", False) and encoding not in ["3mer", "5mer"]:
+        # The first token is the header. Since the tokenizer doesn't have an easy way to drop the first line after training,
+        # we can't easily strip the header during the `train()` call if it just reads from the file.
+        # Actually, replacing the file with a temp file that doesn't have a header is the safest approach.
+        pass
 
     # removing metadata left
     colsep = getattr(args.data_source, "columnsep", "\t")
@@ -172,8 +183,20 @@ def tokenize(args):
             logging.info(f"Tokenizing {file_path} with temp file {tmp.name}")
             tokenizer.train([tmp.name], trainer)
     else:
-        logging.info(f"Tokenizing {file_path}")
-        tokenizer.train([str(file_path)], trainer)
+        if getattr(args.data_source, "stripheader", False):
+            with tempfile.NamedTemporaryFile("w+", delete=False, encoding="utf-8") as tmp:
+                with open(file_path, encoding="utf-8") as orig_f:
+                    lines = orig_f.readlines()
+                    if lines:
+                        tmp.writelines(lines[1:])
+                tmp_name = tmp.name
+            logging.info(f"Tokenizing {file_path} with header stripped via temp file {tmp_name}")
+            tokenizer.train([tmp_name], trainer)
+            import os
+            os.remove(tmp_name)
+        else:
+            logging.info(f"Tokenizing {file_path}")
+            tokenizer.train([str(file_path)], trainer)
 
     # Add standard BERT post-processing.
     tokenizer.post_processor = BertProcessing(
