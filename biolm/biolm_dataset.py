@@ -397,7 +397,8 @@ class BioLMDataset(Dataset):
     def _maybe_attach_labels(self) -> None:
         mode = getattr(self.args, "mode", None)
         labelpos = self._ds_get("labelpos", getattr(self.args, "labelpos", None))
-        logging.info("DEBUG", mode, labelpos)
+        print("-"*100, flush=True)
+        print(labelpos, flush=True)
         weightpos = getattr(self.args, "weightpos", None)
         if mode not in ["fine-tune", "predict", "interpret"] or labelpos is None:
             return
