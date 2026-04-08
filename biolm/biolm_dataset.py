@@ -398,7 +398,7 @@ class BioLMDataset(Dataset):
         mode = getattr(self.args, "mode", None)
         labelpos = self._ds_get("labelpos", getattr(self.args, "labelpos", None))
         print("-"*100, flush=True)
-        print(labelpos, flush=True)
+        print(self.args, flush=True)
         weightpos = getattr(self.args, "weightpos", None)
         if mode not in ["fine-tune", "predict", "interpret"] or labelpos is None:
             return
