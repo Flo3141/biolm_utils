@@ -387,9 +387,7 @@ def test(
     compute_metrics = constants["METRIC"](full_dataset, model_load_path)
     labels = getattr(full_dataset, "labels", None)
     print("="*100, flush=True)
-    print(test_args, flush=True)
-    print("="*100, flush=True)
-    print(full_dataset, flush=True)
+    print(full_dataset.get(0), flush=True)
     print("="*100, flush=True)
 
     evaluator = get_trainer(
