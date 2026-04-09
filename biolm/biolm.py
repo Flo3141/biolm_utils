@@ -380,6 +380,8 @@ def test(
         model.scaling_method = full_dataset.scaling_method
     if hasattr(model, "scaling_method") and model.scaling_method:
         logging.info(f"Model uses scaling method: {model.scaling_method}")
+    print("="*100, flush=True)
+    print(args, flush=True)
 
     test_args = _build_test_args(model_load_path, test_dataset)
     compute_metrics = constants["METRIC"](full_dataset, model_load_path)
