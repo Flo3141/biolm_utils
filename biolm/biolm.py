@@ -386,10 +386,9 @@ def test(
     test_args = _build_test_args(model_load_path, test_dataset)
     compute_metrics = constants["METRIC"](full_dataset, model_load_path)
     labels = getattr(full_dataset, "labels", None)
-    input_ids = getattr(full_dataset, "input_ids", None)
     print("="*100, flush=True)
-    print(input_ids[0].value_counts(return_counts=True), flush=True)
-    print(input_ids[0].shape(), flush=True)
+    print(full_dataset[0]["input_ids"].value_counts(return_counts=True), flush=True)
+    print(full_dataset[0]["input_ids"].shape, flush=True)
     print("="*100, flush=True)
     exit()
     evaluator = get_trainer(
