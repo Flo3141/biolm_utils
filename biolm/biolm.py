@@ -382,15 +382,11 @@ def test(
         logging.info(f"Model uses scaling method: {model.scaling_method}")
     print("="*100, flush=True)
     print(args, flush=True)
+    print("="*100, flush=True)
 
     test_args = _build_test_args(model_load_path, test_dataset)
     compute_metrics = constants["METRIC"](full_dataset, model_load_path)
     labels = getattr(full_dataset, "labels", None)
-    print("="*100, flush=True)
-    print(full_dataset[0]["input_ids"].value_counts(return_counts=True), flush=True)
-    print(full_dataset[0]["input_ids"].shape, flush=True)
-    print("="*100, flush=True)
-    exit()
     evaluator = get_trainer(
         args,
         trainer_cls,
